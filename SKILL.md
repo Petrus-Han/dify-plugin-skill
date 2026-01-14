@@ -335,18 +335,43 @@ dify plugin checksum ./my_plugin.difypkg
    - Create separate plugins for separate APIs
 
 5. **Use invalid tags**
+
+   Dify has strict tag validation. Only these 19 tags are valid:
+
+   **Valid Tags:**
+   - `search` - Search tools and services
+   - `image` - Image generation, editing, analysis
+   - `videos` - Video processing, creation
+   - `weather` - Weather information services
+   - `finance` - Financial services, banking, accounting
+   - `design` - Design tools and services
+   - `travel` - Travel and booking services
+   - `social` - Social media integrations
+   - `news` - News and RSS feeds
+   - `medical` - Healthcare and medical services
+   - `productivity` - Productivity and workflow tools
+   - `education` - Educational tools and content
+   - `business` - Business operations and CRM
+   - `entertainment` - Entertainment and gaming
+   - `utilities` - General utility tools
+   - `agent` - Agent-related functionality
+   - `rag` - RAG and knowledge base tools
+   - `trigger` - Trigger/event plugins
+   - `other` - Miscellaneous
+
    ```yaml
    # ❌ BAD - These tags don't exist
    tags:
-     - banking
-     - payments
-     - automation
+     - banking      # Invalid! Use 'finance' instead
+     - payments     # Invalid! Use 'finance' or 'utilities'
+     - automation   # Invalid! Use 'productivity' or 'utilities'
+     - api          # Invalid! Use appropriate category
 
-   # ✅ GOOD - Use official tags
+   # ✅ GOOD - Use official tags only
    tags:
-     - finance
-     - utilities
-     - productivity
+     - finance      # For financial/accounting plugins
+     - utilities    # For general-purpose tools
+     - productivity # For workflow/automation tools
    ```
 
 6. **Request unnecessary permissions**
@@ -459,6 +484,28 @@ except httpx.HTTPError as e:
 1. Write diagnostic script to test API directly
 2. Check API response structure
 3. Verify credential scopes/permissions
+
+### Error: "Field validation for 'Tags[X]' failed on the 'plugin_tag' tag"
+
+**Cause**: Using invalid tag in manifest.yaml.
+
+**Solution**: Use only the 19 valid tags (see Common Pitfalls #5):
+```yaml
+tags:
+  - finance      # ✅ Valid
+  - utilities    # ✅ Valid
+  - banking      # ❌ Invalid - use 'finance' instead
+  - payments     # ❌ Invalid - use 'finance' or 'utilities'
+```
+
+### Error: "Failed to parse response from plugin daemon"
+
+**Cause**: YAML syntax error or tags defined in wrong location.
+
+**Solution**:
+- Ensure tags are only in `manifest.yaml`, NOT in `provider.yaml`
+- Validate YAML syntax with a linter
+- Check for duplicate keys or incorrect indentation
 
 ---
 
@@ -658,6 +705,10 @@ resource:
 plugins:
   tools: # or triggers/endpoints/models
     - provider/provider.yaml
+
+tags:
+  - finance      # Choose from 19 valid tags (see Common Pitfalls)
+  - utilities
 
 meta:
   version: 0.1.0
