@@ -5,6 +5,25 @@ All notable changes to the Dify Plugin Development Skill will be documented in t
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.0.1] - 2026-01-14
+
+### Added
+- **Tag Validation Reference**
+  - Complete list of 19 valid plugin tags
+  - Tag descriptions and use cases
+  - Examples of invalid tags with corrections
+  - Added tags to manifest.yaml template
+
+### Fixed
+- **Debugging Guide Enhancements**
+  - Added tag validation error solutions
+  - Added "Failed to parse response" error handling
+  - Clarified that tags only belong in manifest.yaml, not provider.yaml
+
+### Documentation
+- Enhanced Common Pitfalls section with full tag list
+- Added practical examples of tag selection for different plugin types
+
 ## [1.0.0] - 2026-01-14
 
 ### Added
