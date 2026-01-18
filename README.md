@@ -8,14 +8,14 @@ A comprehensive guide and workflow for developing Dify plugins, designed to be u
 
 ```bash
 # In Claude Code, run:
-/plugin marketplace add <your-github-username>/dify-plugin-skill
+/plugin marketplace add Petrus-Han/dify-plugin-skill
 /plugin install dify-plugin@dify-plugin-skills
 ```
 
 ### Option 2: Script Install
 
 ```bash
-git clone https://github.com/<your-github-username>/dify-plugin-skill.git
+git clone https://github.com/Petrus-Han/dify-plugin-skill.git
 cd dify-plugin-skill
 ./install.sh            # Global install
 ./install.sh --local    # Project install
