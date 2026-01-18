@@ -1,0 +1,30 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "dify-plugin-skills",
+  "description": "Skills for building Dify plugins - Tool, Trigger, Extension, Model, Datasource, and Agent Strategy plugins",
+  "owner": {
+    "name": "Petrus",
+    "email": "petrus@langgenius.ai"
+  },
+  "metadata": {
+    "version": "1.0.0",
+    "homepage": "https://github.com/langgenius/dify-plugin-skill"
+  },
+  "plugins": [
+    {
+      "name": "dify-plugin",
+      "description": "Build Dify plugins (Tool, Trigger, Extension, Model, Datasource, Agent Strategy). Use when integrating external APIs, adding webhooks, implementing model providers, connecting data sources, or creating custom agent reasoning strategies.",
+      "version": "1.0.0",
+      "author": {
+        "name": "Petrus",
+        "email": "petrus@langgenius.ai"
+      },
+      "source": "./",
+      "category": "development",
+      "strict": false,
+      "skills": [
+        "./skills/dify-plugin"
+      ]
+    }
+  ]
+}

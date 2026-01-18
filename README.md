@@ -2,6 +2,25 @@
 
 A comprehensive guide and workflow for developing Dify plugins, designed to be used as a Claude Code Skill.
 
+## Installation
+
+### Option 1: Marketplace (Recommended)
+
+```bash
+# In Claude Code, run:
+/plugin marketplace add <your-github-username>/dify-plugin-skill
+/plugin install dify-plugin@dify-plugin-skills
+```
+
+### Option 2: Script Install
+
+```bash
+git clone https://github.com/<your-github-username>/dify-plugin-skill.git
+cd dify-plugin-skill
+./install.sh            # Global install
+./install.sh --local    # Project install
+```
+
 ## Overview
 
 This skill provides a structured, phase-by-phase approach to building reliable Dify plugins, from initial planning to deployment and maintenance. It includes best practices, common pitfalls, debugging strategies, and real-world examples.
@@ -10,7 +29,7 @@ This skill provides a structured, phase-by-phase approach to building reliable D
 
 ### Core Documentation
 
-- **[SKILL.md](SKILL.md)** - The main skill file containing:
+- **[SKILL.md](skills/dify-plugin/SKILL.md)** - The main skill file containing:
   - 8-phase development workflow
   - Common pitfalls and solutions
   - Debugging guide
@@ -20,12 +39,12 @@ This skill provides a structured, phase-by-phase approach to building reliable D
 
 ### Reference Documentation
 
-- **[references/tool-plugin.md](references/tool-plugin.md)** - Tool plugin development guide
-- **[references/trigger-plugin.md](references/trigger-plugin.md)** - Trigger plugin development guide
-- **[references/extension-plugin.md](references/extension-plugin.md)** - Extension plugin development guide
-- **[references/model-plugin.md](references/model-plugin.md)** - Model plugin development guide
-- **[references/yaml-schemas.md](references/yaml-schemas.md)** - YAML configuration schemas
-- **[references/debugging.md](references/debugging.md)** - Debugging and deployment guide
+- **[references/tool-plugin.md](skills/dify-plugin/references/tool-plugin.md)** - Tool plugin development guide
+- **[references/trigger-plugin.md](skills/dify-plugin/references/trigger-plugin.md)** - Trigger plugin development guide
+- **[references/extension-plugin.md](skills/dify-plugin/references/extension-plugin.md)** - Extension plugin development guide
+- **[references/model-plugin.md](skills/dify-plugin/references/model-plugin.md)** - Model plugin development guide
+- **[references/yaml-schemas.md](skills/dify-plugin/references/yaml-schemas.md)** - YAML configuration schemas
+- **[references/debugging.md](skills/dify-plugin/references/debugging.md)** - Debugging and deployment guide
 
 ## Development Workflow
 
@@ -154,21 +173,17 @@ Tool Files:          tools/{action}_{resource}.{yaml,py}
 
 ## Using This Skill with Claude Code
 
-1. **Copy to Claude Code Skills Directory**
-   ```bash
-   cp -r dify-plugin-skill ~/.claude/skills/
-   ```
+After installation (see Installation section above), simply ask Claude to help you build a Dify plugin:
 
-2. **Invoke in Claude Code**
-   - Claude Code will automatically detect and load the skill
-   - Reference it when asking to build a Dify plugin
-   - Example: "Using the dify-plugin skill, help me create a Stripe payments plugin"
+- "Help me create a Stripe payments plugin for Dify"
+- "Build a Dify trigger plugin for GitHub webhooks"
+- "Create a Dify model plugin for my custom LLM API"
 
-3. **Skill Will Guide**
-   - Phase-by-phase development
-   - Automatic error detection and prevention
-   - Best practice recommendations
-   - Testing strategies
+Claude will automatically use the skill to guide you through:
+- Phase-by-phase development
+- Automatic error detection and prevention
+- Best practice recommendations
+- Testing strategies
 
 ## Debugging Common Errors
 

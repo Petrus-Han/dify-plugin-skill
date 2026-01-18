@@ -6,11 +6,13 @@ set -e
 
 SKILL_NAME="dify-plugin"
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+SKILL_SOURCE="$SCRIPT_DIR/skills/$SKILL_NAME"
 
 # Colors
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 YELLOW='\033[1;33m'
+CYAN='\033[0;36m'
 NC='\033[0m' # No Color
 
 usage() {
@@ -21,6 +23,11 @@ usage() {
     echo "  --local, -l     Install to current project's .claude/skills/"
     echo "  --uninstall     Remove the skill"
     echo "  --help, -h      Show this help message"
+    echo ""
+    echo "Marketplace Installation (recommended):"
+    echo "  In Claude Code, run:"
+    echo "    /plugin marketplace add <your-github-username>/dify-plugin-skill"
+    echo "    /plugin install dify-plugin@dify-plugin-skills"
     echo ""
     echo "Examples:"
     echo "  $0              # Global install"
@@ -34,9 +41,9 @@ install_skill() {
 
     echo -e "${YELLOW}Installing $SKILL_NAME skill ($install_type)...${NC}"
 
-    # Check if SKILL.md exists in repo root
-    if [ ! -f "$SCRIPT_DIR/SKILL.md" ]; then
-        echo -e "${RED}Error: SKILL.md not found in $SCRIPT_DIR${NC}"
+    # Check if SKILL.md exists
+    if [ ! -f "$SKILL_SOURCE/SKILL.md" ]; then
+        echo -e "${RED}Error: SKILL.md not found in $SKILL_SOURCE${NC}"
         exit 1
     fi
 
@@ -50,12 +57,12 @@ install_skill() {
         mkdir -p "$target_dir"
     fi
 
-    # Copy skill files from repo root
-    cp "$SCRIPT_DIR/SKILL.md" "$target_dir/"
+    # Copy skill files
+    cp "$SKILL_SOURCE/SKILL.md" "$target_dir/"
 
     # Copy references if they exist
-    if [ -d "$SCRIPT_DIR/references" ]; then
-        cp -r "$SCRIPT_DIR/references" "$target_dir/"
+    if [ -d "$SKILL_SOURCE/references" ]; then
+        cp -r "$SKILL_SOURCE/references" "$target_dir/"
     fi
 
     echo -e "${GREEN}Done!${NC} Skill installed to: $target_dir"
