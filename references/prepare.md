@@ -1,0 +1,153 @@
+# Dify Plugin Development Cheatsheet
+
+> A comprehensive reference guide for Dify plugin development, including environment requirements, installation methods, development process, plugin categories and types, common code snippets, and solutions to common issues. Suitable for developers to quickly consult and reference.
+
+### Environment Requirements
+
+* Python version ≥ 3.12
+* Dify plugin scaffold tool (dify-plugin-daemon)
+
+> Learn more: [Initializing Development Tools](/en/develop-plugin/getting-started/cli)
+
+### Obtaining the Dify Plugin Development Package
+
+[Dify Plugin CLI](https://github.com/langgenius/dify-plugin-daemon/releases)
+
+#### Installation Methods for Different Platforms
+
+**macOS [Brew](https://github.com/langgenius/homebrew-dify) (Global Installation):**
+
+```bash  theme={null}
+brew tap langgenius/dify
+brew install dify
+```
+
+After installation, open a new terminal window and enter the `dify version` command. If it outputs the version information, the installation was successful.
+
+**macOS ARM (M Series Chips):**
+
+```bash  theme={null}
+# Download dify-plugin-darwin-arm64
+chmod +x dify-plugin-darwin-arm64
+./dify-plugin-darwin-arm64 version
+```
+
+**macOS Intel:**
+
+```bash  theme={null}
+# Download dify-plugin-darwin-amd64
+chmod +x dify-plugin-darwin-amd64
+./dify-plugin-darwin-amd64 version
+```
+
+**Linux:**
+
+```bash  theme={null}
+# Download dify-plugin-linux-amd64
+chmod +x dify-plugin-linux-amd64
+./dify-plugin-linux-amd64 version
+```
+
+**Global Installation (Recommended):**
+
+```bash  theme={null}
+# Rename and move to system path
+# Example (macOS ARM)
+mv dify-plugin-darwin-arm64 dify
+sudo mv dify /usr/local/bin/
+dify version
+```
+
+### Running the Development Package
+
+Here we use `dify` as an example. If you are using a local installation method, please replace the command accordingly, for example `./dify-plugin-darwin-arm64 plugin init`.
+
+### Plugin Development Process
+
+#### 1. Create a New Plugin
+
+```bash  theme={null}
+./dify plugin init
+```
+
+Follow the prompts to complete the basic plugin information configuration
+
+> Learn more: [Dify Plugin Development: Hello World Guide](/en/develop-plugin/dev-guides-and-walkthroughs/tool-plugin)
+
+#### 2. Run in Development Mode
+
+Configure the `.env` file, then run the following command in the plugin directory:
+
+```bash  theme={null}
+python -m main
+```
+
+> Learn more: [Remote Debugging Plugins](/en/develop-plugin/features-and-specs/plugin-types/remote-debug-a-plugin)
+
+#### 3. Packaging and Deployment
+
+Package the plugin:
+
+```bash  theme={null}
+cd ..
+dify plugin package ./yourapp
+```
+
+> Learn more: [Publishing Overview](/en/develop-plugin/publishing/marketplace-listing/release-overview)
+
+### Plugin Categories
+
+#### Tool Labels
+
+Category `tag` [class ToolLabelEnum(Enum)](https://github.com/langgenius/dify-plugin-sdks/blob/main/python/dify_plugin/entities/tool.py)
+
+```python  theme={null}
+class ToolLabelEnum(Enum):
+    SEARCH = "search"
+    IMAGE = "image"
+    VIDEOS = "videos"
+    WEATHER = "weather"
+    FINANCE = "finance"
+    DESIGN = "design"
+    TRAVEL = "travel"
+    SOCIAL = "social"
+    NEWS = "news"
+    MEDICAL = "medical"
+    PRODUCTIVITY = "productivity"
+    EDUCATION = "education"
+    BUSINESS = "business"
+    ENTERTAINMENT = "entertainment"
+    UTILITIES = "utilities"
+    OTHER = "other"
+```
+
+### Plugin Type Reference
+
+Dify supports the development of various types of plugins:
+
+* **Tool plugin**: Integrate third-party APIs and services
+  > Learn more: [Dify Plugin Development: Hello World Guide](/en/develop-plugin/dev-guides-and-walkthroughs/tool-plugin)
+
+* **Model plugin**: Integrate AI models
+  > Learn more: [Model Plugin](/en/develop-plugin/features-and-specs/plugin-types/model-designing-rules), [Quick Integration of a New Model](/en/develop-plugin/dev-guides-and-walkthroughs/creating-new-model-provider)
+
+* **Agent strategy plugin**: Customize Agent thinking and decision-making strategies
+  > Learn more: [Agent Strategy Plugin](/en/develop-plugin/features-and-specs/advanced-development/reverse-invocation)
+
+* **Extension plugin**: Extend Dify platform functionality, such as Endpoints and WebAPP
+  > Learn more: [Extension Plugin](/en/develop-plugin/dev-guides-and-walkthroughs/endpoint)
+
+* **Data source plugin**: Serve as the document data source and starting point for knowledge pipelines
+  > Learn more: [Data Source Plugin](/en/develop-plugin/dev-guides-and-walkthroughs/datasource-plugin)
+
+* **Trigger plugin**: Automatically trigger Workflow execution upon third-party events
+  > Learn more: [Trigger Plugin](/en/develop-plugin/dev-guides-and-walkthroughs/trigger-plugin)
+
+***
+
+[Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/dev-guides-and-walkthroughs/cheatsheet.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
+
+
+---
+
+> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://docs.dify.ai/llms.txt

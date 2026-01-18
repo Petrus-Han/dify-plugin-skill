@@ -1,47 +1,33 @@
 ---
-name: dify-plugin-skill
+name: dify-plugin
 description: Guide for creating Dify plugins (Tool, Trigger, Extension, Model, Datasource, Agent Strategy). Use when building integrations for Dify workflows, adding new tools, connecting external services via webhooks, or implementing custom model providers. Supports Python SDK with YAML configurations.
+dependencies: python>=3.12, dify_plugin>=0.1.0, httpx, uv
 ---
 
 # Dify Plugin Development
 
 Build plugins that extend Dify's capabilities through tools, triggers, extensions, models, datasources, and agent strategies.
 
-## Overview
-
-Dify plugins are Python-based extensions that integrate external services, add new capabilities, and automate workflows. This skill guides you through the complete plugin development lifecycle, from planning to deployment.
-
-### What Makes a Good Plugin?
-
-The best Dify plugins:
-
-- ✅ Solve a specific, repeatable integration need
-- ✅ Have clear, focused functionality (one plugin = one service/API)
-- ✅ Follow Dify's plugin architecture and conventions
-- ✅ Handle errors gracefully with helpful messages
-- ✅ Support appropriate authentication methods
-- ✅ Are well-tested before deployment
-
 ---
 
 ## When to Apply This Skill
 
-Use this skill when you need to:
+Use this Skill when you need to:
 
-- **Create** a new Dify plugin from scratch (Tool, Trigger, Extension, Model, Datasource, Agent Strategy)
-- **Integrate** external APIs (payment gateways, SaaS platforms, databases)
-- **Implement** authentication (OAuth2, API Keys, token-based auth)
-- **Debug** plugin errors, validation issues, or runtime problems
-- **Package** and deploy plugins to Dify platform
-- **Add** webhooks, triggers, or event-driven workflows
-- **Extend** Dify with custom model providers or agent strategies
+- ✅ **Create** a new Dify plugin from scratch
+- ✅ **Integrate** external APIs (Mercury, QuickBooks, GitHub, etc.)
+- ✅ **Implement** authentication (OAuth2, API Key, Token)
+- ✅ **Add** triggers for webhook events
+- ✅ **Debug** plugin errors and validation issues
+- ✅ **Package** and deploy plugins to Dify platform
+- ✅ **Extend** Dify workflows with custom tools or models
 
-Do NOT use this skill for:
-
+**Do NOT use** this Skill for:
 - ❌ General Python programming unrelated to Dify
-- ❌ Dify platform configuration (use platform docs)
-- ❌ Frontend/UI development
-- ❌ Writing Dify workflows (that's a different skill)
+- ❌ Frontend development
+- ❌ Dify platform configuration (not plugin development)
+
+---
 
 ## Quick Start
 
@@ -484,67 +470,4 @@ This Skill uses a three-level information structure:
 | `provider/provider.py` | Provider validation and OAuth logic | ✅ Yes |
 | `tools/*.yaml` | Tool definitions with parameters | ✅ Yes (for Tool plugins) |
 | `tools/*.py` | Tool implementations | ✅ Yes (for Tool plugins) |
-| `pyproject.toml` | uv dependency management | ✅ Yes |
-| `uv.lock` | Lock file (auto-generated) | ✅ Yes |
-| `_assets/icon.svg` | Plugin icon | ✅ Yes |
-
-### Valid Plugin Tags
-
-Only these 19 tags are accepted:
-`search`, `image`, `videos`, `weather`, `finance`, `design`, `travel`, `social`, `news`, `medical`, `productivity`, `education`, `business`, `entertainment`, `utilities`, `agent`, `rag`, `trigger`, `other`
-
-### Common Commands
-
-```bash
-# Initialize new plugin
-dify plugin init
-
-# Add dependencies
-uv add <package-name>
-
-# Package plugin
-dify plugin package ./plugin-folder
-
-# Remote debugging
-uv run python -m main
-```
-
----
-
-## Summary
-
-Creating effective Dify plugins requires:
-
-1. **Clear Planning** - Understand the API, authentication, and plugin type before coding
-2. **Focused Scope** - One plugin per service, one tool per operation
-3. **Follow Conventions** - Use official plugins as references, follow naming patterns
-4. **Test Thoroughly** - Local → Package → Integration → Production
-5. **Handle Errors Gracefully** - Helpful error messages, proper exception handling
-6. **Progressive Disclosure** - Core guide → References → Examples
-
-### Development Checklist
-
-Before releasing your plugin:
-
-- [ ] All credentials validated and tested
-- [ ] Error handling implemented for all API calls
-- [ ] No hardcoded secrets or URLs
-- [ ] Documentation complete (README, CHANGELOG)
-- [ ] Version number follows semantic versioning
-- [ ] Only valid tags used in manifest.yaml
-- [ ] No unnecessary LLM calls in tools
-- [ ] All tools tested with valid and invalid inputs
-- [ ] Package builds without errors
-- [ ] Icon and assets included
-
-Start simple, test incrementally, and expand gradually. Your plugins will become powerful integrations that extend Dify's capabilities for your specific needs.
-
-### Next Steps
-
-1. 📖 Review [references/plugins_reference.md](references/plugins_reference.md) for official examples
-2. 🔨 Choose plugin type and read type-specific guide in [references/](references/)
-3. 🚀 Create your first plugin with `dify plugin init`
-4. 🧪 Test with sandbox credentials first
-5. 📦 Package and deploy to Dify
-
-**Happy Plugin Building! 🎉**
+| `py
