@@ -4,11 +4,11 @@
   "description": "Skills for building Dify plugins - Tool, Trigger, Extension, Model, Datasource, and Agent Strategy plugins",
   "owner": {
     "name": "Petrus",
-    "email": "petrus@langgenius.ai"
+    "email": "peter.han@dify.ai"
   },
   "metadata": {
     "version": "1.0.0",
-    "homepage": "https://github.com/langgenius/dify-plugin-skill"
+    "homepage": "https://github.com/Petrus-Han/dify-plugin-skill"
   },
   "plugins": [
     {
@@ -17,7 +17,7 @@
       "version": "1.0.0",
       "author": {
         "name": "Petrus",
-        "email": "petrus@langgenius.ai"
+        "email": "peter.han@dify.ai"
       },
       "source": "./",
       "category": "development",
