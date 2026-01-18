@@ -28,3 +28,13 @@ Thumbs.db
 # Test outputs
 test_output/
 *.difypkg
+
+# Packaged skills
+*.skill
+
+# Claude Code local settings
+.claude/settings.local.json
+
+# Personal notes and plans
+plans.md
+plans-and-my-notes-*.d

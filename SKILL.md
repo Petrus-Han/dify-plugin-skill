@@ -1,550 +1,119 @@
 ---
-name: dify-plugin-skill
-description: Guide for creating Dify plugins (Tool, Trigger, Extension, Model, Datasource, Agent Strategy). Use when building integrations for Dify workflows, adding new tools, connecting external services via webhooks, or implementing custom model providers. Supports Python SDK with YAML configurations.
+name: dify-plugin
+description: Build Dify plugins (Tool, Trigger, Extension, Model, Datasource, Agent Strategy). Use when integrating external APIs, adding webhooks, implementing model providers, connecting data sources, or creating custom agent reasoning strategies. Supports Python SDK with YAML configurations.
 ---
 
 # Dify Plugin Development
 
-Build plugins that extend Dify's capabilities through tools, triggers, extensions, models, datasources, and agent strategies.
-
-## Overview
-
-Dify plugins are Python-based extensions that integrate external services, add new capabilities, and automate workflows. This skill guides you through the complete plugin development lifecycle, from planning to deployment.
-
-### What Makes a Good Plugin?
-
-The best Dify plugins:
-
-- ✅ Solve a specific, repeatable integration need
-- ✅ Have clear, focused functionality (one plugin = one service/API)
-- ✅ Follow Dify's plugin architecture and conventions
-- ✅ Handle errors gracefully with helpful messages
-- ✅ Support appropriate authentication methods
-- ✅ Are well-tested before deployment
-
----
-
-## When to Apply This Skill
-
-Use this skill when you need to:
-
-- **Create** a new Dify plugin from scratch (Tool, Trigger, Extension, Model, Datasource, Agent Strategy)
-- **Integrate** external APIs (payment gateways, SaaS platforms, databases)
-- **Implement** authentication (OAuth2, API Keys, token-based auth)
-- **Debug** plugin errors, validation issues, or runtime problems
-- **Package** and deploy plugins to Dify platform
-- **Add** webhooks, triggers, or event-driven workflows
-- **Extend** Dify with custom model providers or agent strategies
-
-Do NOT use this skill for:
-
-- ❌ General Python programming unrelated to Dify
-- ❌ Dify platform configuration (use platform docs)
-- ❌ Frontend/UI development
-- ❌ Writing Dify workflows (that's a different skill)
-
 ## Quick Start
 
-### 1. Install Required Tools
-
 ```bash
-# Install Dify CLI
+# Install tools
 brew tap langgenius/dify && brew install dify
-
-# Install uv (modern Python package manager)
 curl -LsSf https://astral.sh/uv/install.sh | sh
-```
 
-### 2. Create Your First Plugin
-
-```bash
-# Interactive mode (recommended for beginners)
+# Create plugin
 dify plugin init
 
-# Quick mode (for experienced developers)
-dify plugin init --quick --name my-plugin --category tool --language python
-```
+# Setup dependencies
+cd my-plugin && uv init --no-readme && uv add dify_plugin
 
-### 3. Setup Dependencies
-
-```bash
-cd my-plugin
-uv init --no-readme     # Initialize uv project
-uv add dify_plugin      # Add Dify SDK
-```
-
-### 4. Package and Deploy
-
-```bash
+# Package and deploy
 dify plugin package ./my-plugin
-# Upload the .difypkg file to Dify
 ```
-
----
 
 ## Plugin Types
 
-Choose the right plugin type for your integration:
-
-| Type | Purpose | Use When |
-|------|---------|----------|
-| **Tool** | Add capabilities to workflows | Integrating APIs (search, database, SaaS) |
-| **Trigger** | Start workflows from events | Receiving webhooks (GitHub, Slack, custom) |
-| **Extension** | Custom HTTP endpoints | Building APIs, OAuth callbacks |
-| **Model** | New AI model providers | Adding LLM/embedding providers |
-| **Datasource** | External data connections | Connecting to databases, cloud storage |
-| **Agent Strategy** | Custom agent logic | Implementing specialized reasoning |
-
-💡 **Tip**: Start with **Tool** plugins if you're unsure. They're the most common and easiest to implement.
-
-📚 **Detailed References**: See [references/](references/) folder for type-specific guides.
-
----
+| Type | Purpose | Reference |
+|------|---------|-----------|
+| **Tool** | Integrate external APIs | [tool-plugin.md](references/tool-plugin.md) |
+| **Trigger** | Start workflows from webhooks | [trigger-plugin.md](references/trigger-plugin.md) |
+| **Extension** | Custom HTTP endpoints | [extension-plugin.md](references/extension-plugin.md) |
+| **Model** | Add AI model providers | [model-plugin.md](references/model-plugin.md) |
+| **Datasource** | Connect external storage | [datasource-plugin.md](references/datasource-plugin.md) |
+| **Agent Strategy** | Custom agent reasoning | [agent-strategy-plugin.md](references/agent-strategy-plugin.md) |
 
 ## Development Workflow
 
-Follow this 8-phase process to build reliable plugins:
+1. **Plan** - Identify plugin type, read API docs, check [plugins_reference.md](references/plugins_reference.md)
+2. **Create** - Run `dify plugin init`, setup dependencies
+3. **Implement** - Write provider.yaml, tool/trigger/model files
+4. **Test** - Validate credentials, test with Dify remote debugging
+5. **Package** - Run `dify plugin package`, upload to Dify
 
-### 📍 Phase 0: Pre-Planning
+## Core Structure
 
-**Quick Checklist:**
-- [ ] Identify plugin type (Tool/Trigger/Model/etc.)
-- [ ] Read target API documentation
-- [ ] Check authentication method (OAuth2/API Key)
-- [ ] Search for similar official plugins
+```
+my-plugin/
+├── manifest.yaml          # Plugin metadata
+├── main.py               # Entry: plugin = Plugin(DifyPluginEnv())
+├── pyproject.toml        # Dependencies (uv)
+├── provider/
+│   ├── provider.yaml     # Credentials + config
+│   └── provider.py       # Validation logic
+├── tools/                # Tool plugins
+│   ├── tool.yaml
+│   └── tool.py
+└── _assets/
+    └── icon.svg
+```
 
-**Official Plugin Examples**: [references/plugins_reference.md](references/plugins_reference.md)
+## Valid Tags
 
----
+Only 19 tags accepted: `search`, `image`, `videos`, `weather`, `finance`, `design`, `travel`, `social`, `news`, `medical`, `productivity`, `education`, `business`, `entertainment`, `utilities`, `agent`, `rag`, `trigger`, `other`
 
-### ✅ Phase 1: Requirements Analysis
+## Common Patterns
 
-**Define:**
-1. What problem does this solve?
-2. Which service are you integrating?
-3. What authentication is needed?
-4. What data flow is required? (read/write/events)
+### Tool Implementation
 
----
-
-### 📋 Phase 2: Scope Definition
-
-**For Tool Plugins:**
-- List 3-7 tools for MVP (e.g., `get_accounts`, `create_charge`)
-- Prioritize essential vs. nice-to-have
-- Map tool dependencies
-- Note API limitations (rate limits, regions)
-
----
-
-### 📝 Phase 3: Planning & Approval
-
-**Key Files to Plan:**
-- `manifest.yaml` - Plugin metadata
-- `provider.yaml` - Authentication config
-- `provider.py` - OAuth/validation logic
-- `tools/*.yaml` - Tool definitions
-- `tools/*.py` - Tool implementations
-
----
-
-### 🔨 Phase 4: Development
-
-**Core Implementation Steps:**
-
-1. **Build Skeleton**
-   ```bash
-   mkdir -p my_plugin/{_assets,provider,tools}
-   touch my_plugin/{manifest.yaml,main.py}
-   ```
-
-2. **Implement Provider** (`provider.py`)
-   - `_validate_credentials()` - Check token validity
-   - `_oauth_get_authorization_url()` - Generate OAuth URL (if OAuth)
-   - `_oauth_get_credentials()` - Exchange code for token (if OAuth)
-
-3. **Implement Tools** (`tools/*.py`)
-   - One file per tool
-   - Return JSON directly (no LLM calls)
-   - Handle errors gracefully
-
-**Code Review Checklist:**
-- [ ] No unnecessary LLM calls in tools
-- [ ] Use `httpx.HTTPError` (not `RequestException`)
-- [ ] No hardcoded URLs or credentials
-- [ ] Proper timeout values (30s recommended)
-
-📚 **Detailed Templates**: See [references/yaml-schemas.md](references/yaml-schemas.md)
-
----
-
-### 🔑 Phase 5: Credential Testing
-
-**Steps:**
-1. Register developer account with target service
-2. Obtain test credentials (sandbox if available)
-3. Write diagnostic script to test API directly
-4. Test `_validate_credentials()` locally
-
-**Example Diagnostic Script:**
 ```python
-import httpx
+from dify_plugin import Tool
+from dify_plugin.entities.tool import ToolInvokeMessage
 
-def test_api_key(api_key):
-    url = "https://api.example.com/v1/test"
-    headers = {"Authorization": f"Bearer {api_key}"}
-    response = httpx.get(url, headers=headers, timeout=30)
-    print(f"Status: {response.status_code}")
-    if response.status_code == 200:
-        print("✅ API Key is valid!")
-    else:
-        print(f"❌ Error: {response.text}")
+class MyTool(Tool):
+    def _invoke(self, tool_parameters: dict) -> Generator[ToolInvokeMessage, None, None]:
+        api_key = self.runtime.credentials["api_key"]
+        result = self._call_api(tool_parameters.get("query"))
+        yield self.create_json_message(result)
 ```
 
----
+### Credential Validation
 
-### 🧪 Phase 6: End-to-End Testing
-
-**Testing Pyramid:**
-
-1. **Local Testing** - Mock Dify runtime, test tools independently
-2. **Package Testing** - `dify plugin package ./my_plugin`
-3. **Upload & Configure** - Test in Dify UI with real credentials
-4. **Integration Testing** - Create test workflow, chain multiple tools
-
-**Test Cases:**
-- ✅ Normal case: Valid inputs, successful response
-- ❌ Error case: Invalid inputs, API errors
-- 🔍 Edge case: Empty results, rate limits, timeouts
-
----
-
-### 📚 Phase 7: Documentation & Release
-
-**Required Documentation:**
-- `README.md` - Overview, features, setup guide
-- `CHANGELOG.md` - Version history
-- `PRIVACY.md` - Data handling policies (if applicable)
-
-**Version Management** (Semantic Versioning):
-- `0.1.0` - Initial release
-- `0.2.0` - New feature (backward compatible)
-- `0.2.1` - Bug fix
-- `1.0.0` - Breaking change
-
----
-
-### 🔄 Phase 8: Maintenance & Iteration
-
-**Ongoing Tasks:**
-- Monitor user feedback
-- Fix critical bugs (increment patch version)
-- Add new features (increment minor version)
-- Update dependencies regularly
-
----
-
-## Common Pitfalls
-
-### ❌ DON'T
-
-**1. Use LLM in tools for simple formatting**
 ```python
-# ❌ BAD - Wastes tokens and adds latency
-yield self.create_text_message(
-    self.session.model.summary.invoke(
-        text=json.dumps(data),
-        instruction="Format this nicely"
-    )
-)
+from dify_plugin import ToolProvider
+from dify_plugin.errors.tool import ToolProviderCredentialValidationError
 
-# ✅ GOOD - Return JSON directly
-yield self.create_json_message(data)
+class MyProvider(ToolProvider):
+    def _validate_credentials(self, credentials: dict) -> None:
+        if not credentials.get("api_key"):
+            raise ToolProviderCredentialValidationError("API Key required")
 ```
 
-**2. Use wrong exception types**
-```python
-# ❌ BAD
-except httpx.RequestException as e:  # This doesn't exist!
+## Common Errors
 
-# ✅ GOOD
-except httpx.HTTPError as e:
-```
-
-**3. Use invalid tags**
-
-Only these 19 tags are valid:
-`search`, `image`, `videos`, `weather`, `finance`, `design`, `travel`, `social`, `news`, `medical`, `productivity`, `education`, `business`, `entertainment`, `utilities`, `agent`, `rag`, `trigger`, `other`
-
-```yaml
-# ❌ BAD
-tags:
-  - banking      # Invalid!
-  - payments     # Invalid!
-
-# ✅ GOOD
-tags:
-  - finance      # Official tag
-  - utilities
-```
-
-**4. Request unnecessary permissions**
-```yaml
-# ❌ BAD - Don't request model permission if not using LLM
-permission:
-  model:
-    enabled: true  # Only if actually using LLM!
-
-# ✅ GOOD
-permission:
-  tool:
-    enabled: true
-```
-
-### ✅ DO
-
-**1. Return structured data**
-```python
-result = {
-    "id": "123",
-    "status": "success",
-    "amount": 100.00
-}
-yield self.create_json_message(result)
-```
-
-**2. Handle errors gracefully**
-```python
-if response.status_code == 401:
-    yield self.create_text_message(
-        "Authentication failed. Please check your API token."
-    )
-elif response.status_code == 404:
-    yield self.create_text_message(
-        f"Resource '{resource_id}' not found."
-    )
-```
-
-**3. Support multiple environments**
-```python
-def get_api_url(self, credentials):
-    env = credentials.get("environment", "sandbox")
-    urls = {
-        "sandbox": "https://api-sandbox.example.com",
-        "production": "https://api.example.com"
-    }
-    return urls[env]
-```
-
----
-
-## Debugging Guide
-
-### Error: "permission denied, you need to enable llm access"
-
-**Cause**: Tool is calling `self.session.model.summary.invoke()` but manifest doesn't have model permission.
-
-**Solution**: Remove LLM calls from tools, return JSON directly.
-
----
-
-### Error: "AttributeError: module 'http
-x' has no attribute 'RequestException'"
-
-**Cause**: Using non-existent exception type.
-
-**Solution**: Change to `httpx.HTTPError`:
-```python
-except httpx.HTTPError as e:
-    yield self.create_text_message(f"Network error: {e}")
-```
-
----
-
-### Error: "401 Unauthorized" in production
-
-**Cause**: Using sandbox credentials in production environment.
-
-**Solution**: Add environment selection to provider and use correct credentials for each environment.
-
----
-
-### Error: "Field validation for 'Tags[X]' failed on the 'plugin_tag' tag"
-
-**Cause**: Using invalid tag in manifest.yaml.
-
-**Solution**: Use only the 19 valid tags (see Common Pitfalls section).
-
----
-
-### Tool returns empty data
-
-**Cause**: API response structure changed or credentials lack permissions.
-
-**Solution**:
-1. Write diagnostic script to test API directly
-2. Check API response structure
-3. Verify credential scopes/permissions
-
----
+| Error | Cause | Fix |
+|-------|-------|-----|
+| `permission denied, you need to enable llm access` | LLM call without permission | Remove LLM calls or set `permission.model.enabled: true` |
+| `httpx.RequestException` | Wrong exception type | Use `httpx.HTTPError` |
+| `Tags[X] failed on plugin_tag` | Invalid tag | Use only valid 19 tags |
+| `401 Unauthorized` | Wrong credentials | Check environment (sandbox vs production) |
 
 ## Best Practices
 
-### 🎯 Keep It Focused
+- Return JSON with `create_json_message()` for structured data
+- Use `httpx.HTTPError` for exception handling
+- Set `timeout=30` for HTTP calls
+- Don't use LLM just for formatting
+- One plugin per API service, one tool per operation
 
-- One plugin per API service
-- One tool per operation
-- 3-7 tools for MVP
+## References
 
-### 🔐 Security First
-
-- Never commit API keys or tokens
-- Use OAuth2 when available
-- Validate all user inputs
-- Use HTTPS for all API calls
-
-### ⚡ Performance Matters
-
-```python
-# Set reasonable timeouts
-response = httpx.get(url, timeout=30)
-
-# Handle rate limiting
-if response.status_code == 429:
-    retry_after = response.headers.get("Retry-After")
-    yield self.create_text_message(
-        f"Rate limit exceeded. Retry after {retry_after}s"
-    )
-```
-
-### 📝 Code Quality
-
-```python
-# Use type hints
-def _invoke(self, tool_parameters: dict[str, Any]) -> Generator[ToolInvokeMessage, None, None]:
-    """
-    Invoke the tool to fetch data.
-    
-    Args:
-        tool_parameters: Dictionary containing request parameters
-        
-    Returns:
-        Generator yielding response messages
-    """
-    pass
-```
-
-### 📛 Naming Conventions
-
-```
-Plugin Directory:    mercury_tools_plugin/
-Plugin Name:         mercury_tools
-Provider Files:      provider/mercury_tools.{yaml,py}
-Tool Files:          tools/get_accounts.{yaml,py}
-```
-
----
-
-## Progressive Disclosure System
-
-This Skill uses a three-level information structure:
-
-### Level 1: Core Guide (This File)
-- Quick start instructions
-- 8-phase workflow overview
-- Common pitfalls and debugging
-- Best practices summary
-
-### Level 2: Reference Files
 - [tool-plugin.md](references/tool-plugin.md) - Tool plugin details
 - [trigger-plugin.md](references/trigger-plugin.md) - Trigger plugin details
 - [model-plugin.md](references/model-plugin.md) - Model plugin details
 - [extension-plugin.md](references/extension-plugin.md) - Extension plugin details
+- [datasource-plugin.md](references/datasource-plugin.md) - Datasource plugin details
+- [agent-strategy-plugin.md](references/agent-strategy-plugin.md) - Agent Strategy plugin details
 - [yaml-schemas.md](references/yaml-schemas.md) - Complete YAML templates
-- [debugging.md](references/debugging.md) - Advanced debugging techniques
 - [plugins_reference.md](references/plugins_reference.md) - Official plugin examples
-
-### Level 3: Examples
-- Complete plugin implementations in [examples/](examples/) folder
-- Real-world use cases and patterns
-
-**💡 Navigation Tip**: Start here → Check references for details → Review examples for patterns
-
----
-
-## Quick Reference
-
-### Core Files
-
-| File | Purpose | Required |
-|------|---------|----------|
-| `manifest.yaml` | Plugin metadata and configuration | ✅ Yes |
-| `main.py` | Entry point: `plugin = Plugin(DifyPluginEnv())` | ✅ Yes |
-| `provider/provider.yaml` | Provider identity and credentials schema | ✅ Yes |
-| `provider/provider.py` | Provider validation and OAuth logic | ✅ Yes |
-| `tools/*.yaml` | Tool definitions with parameters | ✅ Yes (for Tool plugins) |
-| `tools/*.py` | Tool implementations | ✅ Yes (for Tool plugins) |
-| `pyproject.toml` | uv dependency management | ✅ Yes |
-| `uv.lock` | Lock file (auto-generated) | ✅ Yes |
-| `_assets/icon.svg` | Plugin icon | ✅ Yes |
-
-### Valid Plugin Tags
-
-Only these 19 tags are accepted:
-`search`, `image`, `videos`, `weather`, `finance`, `design`, `travel`, `social`, `news`, `medical`, `productivity`, `education`, `business`, `entertainment`, `utilities`, `agent`, `rag`, `trigger`, `other`
-
-### Common Commands
-
-```bash
-# Initialize new plugin
-dify plugin init
-
-# Add dependencies
-uv add <package-name>
-
-# Package plugin
-dify plugin package ./plugin-folder
-
-# Remote debugging
-uv run python -m main
-```
-
----
-
-## Summary
-
-Creating effective Dify plugins requires:
-
-1. **Clear Planning** - Understand the API, authentication, and plugin type before coding
-2. **Focused Scope** - One plugin per service, one tool per operation
-3. **Follow Conventions** - Use official plugins as references, follow naming patterns
-4. **Test Thoroughly** - Local → Package → Integration → Production
-5. **Handle Errors Gracefully** - Helpful error messages, proper exception handling
-6. **Progressive Disclosure** - Core guide → References → Examples
-
-### Development Checklist
-
-Before releasing your plugin:
-
-- [ ] All credentials validated and tested
-- [ ] Error handling implemented for all API calls
-- [ ] No hardcoded secrets or URLs
-- [ ] Documentation complete (README, CHANGELOG)
-- [ ] Version number follows semantic versioning
-- [ ] Only valid tags used in manifest.yaml
-- [ ] No unnecessary LLM calls in tools
-- [ ] All tools tested with valid and invalid inputs
-- [ ] Package builds without errors
-- [ ] Icon and assets included
-
-Start simple, test incrementally, and expand gradually. Your plugins will become powerful integrations that extend Dify's capabilities for your specific needs.
-
-### Next Steps
-
-1. 📖 Review [references/plugins_reference.md](references/plugins_reference.md) for official examples
-2. 🔨 Choose plugin type and read type-specific guide in [references/](references/)
-3. 🚀 Create your first plugin with `dify plugin init`
-4. 🧪 Test with sandbox credentials first
-5. 📦 Package and deploy to Dify
-
-**Happy Plugin Building! 🎉**
+- [debugging.md](references/debugging.md) - Debugging techniques

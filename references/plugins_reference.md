@@ -98,241 +98,72 @@ Reference guide for officially maintained plugins. Use this when developing new 
 | jina_datasource | `datasources/jina_datasource` | Jina Reader - Web content extraction and parsing | `website_crawl` | API Key |
 | onedrive | `datasources/onedrive` | OneDrive - Access files and folders | `online_drive` | OAuth |
 
-### Datasource Implementation Examples
-
-#### AWS S3 Storage (`datasources/aws_s3_storage`)
-**Features:**
-- Access S3 buckets and objects
-- Region-based configuration
-- Supports standard AWS authentication
-
-**Credentials Schema:**
-```yaml
-credentials_schema:
-  - name: secret_access_key
-    type: secret-input
-    required: true
-  - name: access_key_id
-    type: secret-input
-    required: true
-  - name: region_name
-    type: text-input
-    required: true
-```
-
-**Key Files:**
-- `provider/aws_s3_storage.yaml` - Provider configuration
-- `provider/aws_s3_storage.py` - AWS S3 client implementation
-- `datasources/aws_s3_storage.yaml` - Datasource definition
-- `datasources/aws_s3_storage.py` - Datasource logic
-
-#### GitHub (`datasources/github`)
-**Features:**
-- Repository file access (public & private)
-- Issues and Pull Requests with comments
-- Multiple authentication methods (PAT / OAuth)
-- Rate limit handling
-- Automatic markdown processing
-
-**Credentials Schema:**
-```yaml
-credentials_schema:
-  - name: access_token
-    type: secret-input
-    required: true
-    label:
-      en_US: Personal Access Token
-    url: https://github.com/settings/tokens
-
-oauth_schema:
-  client_schema:
-    - name: client_id
-      type: secret-input
-    - name: client_secret
-      type: secret-input
-  credentials_schema:
-    - name: access_token
-      type: secret-input
-    - name: refresh_token
-      type: secret-input
-```
-
-**API Usage:**
-- Base URL: `https://api.github.com`
-- Rate Limits: 5,000 requests/hour
-- Required Scopes: `repo`, `user:email`, `read:user`
-
-**Key Implementation:**
-```python
-class GitHubDataSource(OnlineDocumentDatasource):
-    def _get_headers(self) -> Dict[str, str]:
-        access_token = self.runtime.credentials.get("access_token")
-        return {
-            "Authorization": f"token {access_token}",
-            "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "Dify-GitHub-Datasource"
-        }
-```
-
-#### Azure Blob Storage (`datasources/azure_blob`)
-**Features:**
-- Multiple authentication methods
-- Container and blob access
-- Comprehensive error handling
-
-**Authentication Options:**
-1. Access Key
-2. SAS Token
-3. Connection String
-
-**Credentials Schema:**
-```yaml
-credentials_schema:
-  - name: account_name
-    type: text-input
-    required: true
-  - name: auth_method
-    type: select
-    options:
-      - access_key
-      - sas_token
-      - connection_string
-  - name: account_key
-    type: secret-input
-    required: false
-```
-
-#### Firecrawl (`datasources/firecrawl_datasource`)
-**Features:**
-- Web crawling and scraping
-- Content extraction and cleaning
-- Markdown conversion
-- JavaScript rendering support
-
-**Provider Type:** `website_crawl`
-
-**Permissions Required:**
-```yaml
-permission:
-  model:
-    enabled: true  # Uses model for content processing
-```
-
-**Use Cases:**
-- Crawl documentation websites
-- Extract blog content
-- Monitor web changes
-- Build knowledge bases from websites
-
-#### Jina Reader (`datasources/jina_datasource`)
-**Features:**
-- URL content extraction
-- Automatic content cleaning
-- Markdown output
-- Multi-language support
-
-**Provider Type:** `website_crawl`
-
-**API Configuration:**
-```yaml
-credentials_schema:
-  - name: api_key
-    type: secret-input
-    required: true
-    label:
-      en_US: Jina API Key
-```
-
-**Key Features:**
-- Fast content extraction
-- Clean markdown output
-- No browser automation needed
-- Cost-effective for simple scraping
-
----
-
 ## Agent Strategies
 
 | Name | Directory | Description |
 |------|-----------|-------------|
 | cot_agent | `agent-strategies/cot_agent` | Chain-of-Thought reasoning strategy |
 
+### Agent Strategy Implementation Example
+
+#### cot_agent (`agent-strategies/cot_agent`)
+**Strategies:**
+- `function_calling` - Uses model's native function calling capability
+- `ReAct` - Thought-Action-Observation reasoning pattern
+
+**Key Files:**
+- `manifest.yaml` - Plugin metadata with `plugins.agent_strategies`
+- `provider/agent.yaml` - Provider config listing strategies
+- `strategies/function_calling.yaml` - Strategy parameters definition
+- `strategies/function_calling.py` - Strategy implementation
+
+**Strategy Parameters:**
+```yaml
+parameters:
+  - name: model
+    type: model-selector
+    scope: tool-call&llm
+    required: true
+  - name: tools
+    type: array[tools]
+    required: true
+  - name: instruction
+    type: string
+    required: true
+  - name: query
+    type: string
+    required: true
+  - name: maximum_iterations
+    type: number
+    default: 3
+    min: 1
+    max: 30
+```
+
+**Key Implementation Pattern:**
+```python
+from dify_plugin.interfaces.agent import AgentStrategy
+
+class FunctionCallingStrategy(AgentStrategy):
+    def _invoke(self, parameters: dict) -> Generator[AgentInvokeMessage, None, None]:
+        model = parameters.get("model")
+        tools = self._init_prompt_tools(parameters.get("tools", []))
+
+        for iteration in range(parameters.get("maximum_iterations", 3)):
+            # Call LLM with tools
+            result = self.session.model.llm.invoke(
+                model_config=model,
+                prompt_messages=messages,
+                tools=tools
+            )
+
+            # Execute tool calls if any
+            if result.message.tool_calls:
+                for tool_call in result.message.tool_calls:
+                    tool_result = self.session.tool.invoke(...)
+            else:
+                yield self.create_text_message(result.message.content)
+                break
+```
+
 ---
-
-## Plugin Structure
-
-### Standard Plugin Structure
-```
-plugin-name/
-├── manifest.yaml          # Plugin metadata (name, version, description)
-├── main.py               # Entry point
-├── pyproject.toml        # uv dependency management
-├── uv.lock               # Lock file (auto-generated)
-├── requirements.txt      # Python dependencies (legacy)
-├── provider/             # Provider configuration
-│   ├── provider.py
-│   └── provider.yaml
-├── models/               # Model definitions (Models plugins)
-├── tools/                # Tool definitions (Tools plugins)
-├── datasources/          # Datasource definitions (Datasource plugins)
-│   ├── datasource.py
-│   └── datasource.yaml
-└── _assets/              # Icons and assets
-    └── icon.svg
-```
-
-### Datasource Plugin Structure
-```
-datasource-plugin/
-├── manifest.yaml          # Plugin metadata
-├── main.py               # Entry point: plugin = Plugin(DifyPluginEnv())
-├── pyproject.toml        # uv dependencies
-├── provider/
-│   ├── provider.yaml     # Provider config with credentials_schema
-│   └── provider.py       # Provider class with _validate_credentials()
-├── datasources/
-│   ├── datasource.yaml   # Datasource identity and parameters
-│   └── datasource.py     # Datasource class implementing fetch logic
-└── _assets/
-    └── icon.svg
-```
-
-### Key Datasource Base Classes
-
-**OnlineDocumentDatasource** - For document-based sources (GitHub, Notion, Confluence)
-```python
-from dify_plugin.interfaces.datasource.online_document import OnlineDocumentDatasource
-
-class MyDataSource(OnlineDocumentDatasource):
-    def validate_credentials(self) -> None:
-        # Validate authentication
-        pass
-    
-    def get_pages(self) -> DatasourceGetPagesResponse:
-        # List available documents/pages
-        pass
-    
-    def get_page_content(self, page_id: str) -> str:
-        # Fetch specific document content
-        pass
-```
-
-**OnlineDriveDatasource** - For file storage sources (S3, Google Drive, Dropbox)
-```python
-from dify_plugin.interfaces.datasource.online_drive import OnlineDriveDatasource
-
-class MyDriveDataSource(OnlineDriveDatasource):
-    def validate_credentials(self) -> None:
-        # Validate storage access
-        pass
-    
-    def get_files(self) -> List[FileInfo]:
-        # List files and folders
-        pass
-    
-    def download_file(self, file_id: str) -> bytes:
-        # Download file content
-        pass
-```
-
-When developing new plugins, refer to existing implementations of the same type.
