@@ -49,25 +49,26 @@ plugins:
     - provider/my_provider.yaml
 
 resource:
-  memory: 268435456
-
-tags:
-  - agent
+  memory: 1048576
+  permission:
+    tool:
+      enabled: true
+    model:
+      enabled: true
+      llm: true
 ```
 
 ## provider.yaml
 
-```yaml
-identity:
-  author: your-name
-  name: my_provider
-  label:
-    en_US: My Provider
-    zh_Hans: 我的提供商
-  description:
-    en_US: Custom LLM provider
-  icon: icon_s_en.svg
+Note: Use `provider` field (not `identity.name`). No `identity` section.
 
+```yaml
+provider: my_provider
+label:
+  en_US: My Provider
+  zh_Hans: 我的提供商
+description:
+  en_US: Custom LLM provider
 background: "#F0F0EB"
 icon_small:
   en_US: icon_s_en.svg
@@ -80,7 +81,31 @@ supported_model_types:
 
 configurate_methods:
   - predefined-model
+  - customizable-model    # Enable custom model names
 
+help:
+  title:
+    en_US: Get API Key
+  url:
+    en_US: https://example.com/api-keys
+
+# For customizable-model: per-model credentials
+model_credential_schema:
+  model:
+    label:
+      en_US: Model Name
+    placeholder:
+      en_US: Enter your model name
+  credential_form_schemas:
+    - variable: api_key
+      type: secret-input
+      required: true
+      label:
+        en_US: API Key
+      placeholder:
+        en_US: Enter your API key
+
+# For predefined-model: provider-level credentials
 provider_credential_schema:
   credential_form_schemas:
     - variable: api_key
@@ -100,21 +125,15 @@ provider_credential_schema:
 
 models:
   llm:
-    position: models/llm/_position.yaml
     predefined:
       - models/llm/*.yaml
-
-help:
-  title:
-    en_US: Get API Key
-  url:
-    en_US: https://example.com/api-keys
+    position: models/llm/_position.yaml
 
 extra:
   python:
+    provider_source: provider/my_provider.py
     model_sources:
       - models/llm/llm.py
-    provider_source: provider/my_provider.py
 ```
 
 ## Model Definition (models/llm/model-name.yaml)
@@ -127,9 +146,9 @@ model_type: llm
 
 features:
   - agent-thought      # Supports chain-of-thought
-  - tool-call         # Supports tool calling
-  - stream-tool-call  # Supports streaming tool calls
-  - vision            # Supports image input
+  - multi-tool-call    # Supports tool calling
+  - stream-tool-call   # Supports streaming tool calls
+  - vision             # Supports image input
 
 model_properties:
   mode: chat
@@ -397,10 +416,10 @@ def _handle_error(self, status_code: int, message: str):
 ```yaml
 features:
   - agent-thought      # Chain-of-thought reasoning
-  - tool-call         # Function/tool calling
-  - stream-tool-call  # Streaming tool calls
-  - vision            # Image understanding
-  - document          # Document processing
+  - multi-tool-call    # Function/tool calling
+  - stream-tool-call   # Streaming tool calls
+  - vision             # Image understanding
+  - document           # Document processing
 ```
 
 ## OpenAI Compatible Provider

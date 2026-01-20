@@ -47,12 +47,13 @@ plugins:
     - provider/my_provider.yaml
 
 resource:
-  memory: 268435456
+  memory: 1048576
   permission:
     tool:
       enabled: true
     model:
       enabled: false  # Set true only if using LLM
+      llm: false
 
 tags:
   - utilities  # Valid: search, image, videos, weather, finance, design, travel,
@@ -72,6 +73,8 @@ identity:
   description:
     en_US: Provider description
   icon: icon.svg
+  tags:
+    - utilities
 
 credentials_for_provider:
   api_key:
@@ -151,7 +154,8 @@ extra:
 ## Tool Implementation
 
 ```python
-from typing import Any, Generator
+from collections.abc import Generator
+from typing import Any
 from dify_plugin import Tool
 from dify_plugin.entities.tool import ToolInvokeMessage
 import httpx

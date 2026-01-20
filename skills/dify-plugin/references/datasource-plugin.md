@@ -53,10 +53,12 @@ plugins:
     - provider/my_datasource.yaml
 
 resource:
-  memory: 268435456
-
-tags:
-  - rag
+  memory: 1048576
+  permission:
+    tool:
+      enabled: false
+    model:
+      enabled: false
 ```
 
 ## provider.yaml
@@ -81,7 +83,7 @@ help:
     en_US: https://console.example.com/
 
 credentials_schema:
-  - name: access_key
+  - variable: access_key
     type: secret-input
     required: true
     label:
@@ -89,13 +91,13 @@ credentials_schema:
     placeholder:
       en_US: Enter your access key
 
-  - name: secret_key
+  - variable: secret_key
     type: secret-input
     required: true
     label:
       en_US: Secret Key
 
-  - name: region
+  - variable: region
     type: text-input
     required: true
     default: us-east-1
@@ -105,16 +107,16 @@ credentials_schema:
 # Optional: OAuth support
 oauth_schema:
   client_schema:
-    - name: client_id
+    - variable: client_id
       type: secret-input
       required: true
-    - name: client_secret
+    - variable: client_secret
       type: secret-input
       required: true
   credentials_schema:
-    - name: access_token
+    - variable: access_token
       type: secret-input
-    - name: refresh_token
+    - variable: refresh_token
       type: secret-input
 
 datasources:
@@ -428,16 +430,16 @@ def _browse_files(self, request):
 # provider.yaml
 oauth_schema:
   client_schema:
-    - name: client_id
+    - variable: client_id
       type: secret-input
       required: true
-    - name: client_secret
+    - variable: client_secret
       type: secret-input
       required: true
   credentials_schema:
-    - name: access_token
+    - variable: access_token
       type: secret-input
-    - name: refresh_token
+    - variable: refresh_token
       type: secret-input
 ```
 

@@ -5,10 +5,14 @@ description: Build Dify plugins (Tool, Trigger, Extension, Model, Datasource, Ag
 
 # Dify Plugin Development
 
+## Prerequisites
+
+See [preparation.md](references/preparation.md) for environment setup and CLI installation on different platforms.
+
 ## Quick Start
 
 ```bash
-# Install tools
+# Install tools (macOS)
 brew tap langgenius/dify && brew install dify
 curl -LsSf https://astral.sh/uv/install.sh | sh
 
@@ -33,13 +37,14 @@ dify plugin package ./my-plugin
 | **Datasource** | Connect external storage | [datasource-plugin.md](references/datasource-plugin.md) |
 | **Agent Strategy** | Custom agent reasoning | [agent-strategy-plugin.md](references/agent-strategy-plugin.md) |
 
-## Development Workflow
+## Development SOP
 
-1. **Plan** - Identify plugin type, read API docs, check [plugins_reference.md](references/plugins_reference.md)
-2. **Create** - Run `dify plugin init`, setup dependencies
-3. **Implement** - Write provider.yaml, tool/trigger/model files
-4. **Test** - Validate credentials, test with Dify remote debugging
-5. **Package** - Run `dify plugin package`, upload to Dify
+1. **Prepare** - Read [preparation.md](references/preparation.md), install CLI and dependencies
+2. **Choose Type** - Identify plugin type from Plugin Types table above
+3. **Read API Docs** - If integrating external systems, read their API documentation first
+4. **Study Examples** - Check [plugins_reference.md](references/plugins_reference.md) for best practices
+5. **Develop** - Run `dify plugin init`, read the corresponding plugin reference (e.g., [tool-plugin.md](references/tool-plugin.md) for Tool), implement provider and tools
+6. **Test** - Validate credentials, debug with [debugging.md](references/debugging.md)
 
 ## Core Structure
 
@@ -62,46 +67,8 @@ my-plugin/
 
 Only 19 tags accepted: `search`, `image`, `videos`, `weather`, `finance`, `design`, `travel`, `social`, `news`, `medical`, `productivity`, `education`, `business`, `entertainment`, `utilities`, `agent`, `rag`, `trigger`, `other`
 
-## Common Patterns
-
-### Tool Implementation
-
-```python
-from dify_plugin import Tool
-from dify_plugin.entities.tool import ToolInvokeMessage
-
-class MyTool(Tool):
-    def _invoke(self, tool_parameters: dict) -> Generator[ToolInvokeMessage, None, None]:
-        api_key = self.runtime.credentials["api_key"]
-        result = self._call_api(tool_parameters.get("query"))
-        yield self.create_json_message(result)
-```
-
-### Credential Validation
-
-```python
-from dify_plugin import ToolProvider
-from dify_plugin.errors.tool import ToolProviderCredentialValidationError
-
-class MyProvider(ToolProvider):
-    def _validate_credentials(self, credentials: dict) -> None:
-        if not credentials.get("api_key"):
-            raise ToolProviderCredentialValidationError("API Key required")
-```
-
-## Common Errors
-
-| Error | Cause | Fix |
-|-------|-------|-----|
-| `permission denied, you need to enable llm access` | LLM call without permission | Remove LLM calls or set `permission.model.enabled: true` |
-| `httpx.RequestException` | Wrong exception type | Use `httpx.HTTPError` |
-| `Tags[X] failed on plugin_tag` | Invalid tag | Use only valid 19 tags |
-| `401 Unauthorized` | Wrong credentials | Check environment (sandbox vs production) |
-
 ## Best Practices
 
-- Return JSON with `create_json_message()` for structured data
-- Use `httpx.HTTPError` for exception handling
 - Set `timeout=30` for HTTP calls
 - Don't use LLM just for formatting
 - One plugin per API service, one tool per operation

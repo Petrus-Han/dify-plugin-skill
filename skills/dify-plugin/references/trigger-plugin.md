@@ -44,13 +44,20 @@ meta:
     language: python
     version: "3.12"
     entrypoint: main
+  minimum_dify_version: "1.10.0"
 
 plugins:
   triggers:                    # Note: triggers, not tools
     - provider/my_trigger.yaml
 
 resource:
-  memory: 268435456
+  memory: 1048576
+  permission:
+    tool:
+      enabled: true
+    model:
+      enabled: true
+      llm: true
 
 tags:
   - trigger
@@ -58,17 +65,9 @@ tags:
 
 ## provider.yaml
 
-```yaml
-identity:
-  author: your-name
-  name: my_trigger
-  label:
-    en_US: My Trigger
-    zh_Hans: 我的触发器
-  description:
-    en_US: Receives webhook events from external service
-  icon: icon.svg
+Note: `identity` section should be at the **bottom** of the file.
 
+```yaml
 # User fills when creating subscription
 subscription_schema:
   - name: webhook_secret
@@ -84,12 +83,14 @@ subscription_schema:
 subscription_constructor:
   parameters:
     - name: repository
-      type: text-input
+      type: dynamic-select      # Fetches options via _fetch_parameter_options
       required: true
       label:
         en_US: Repository
+      placeholder:
+        en_US: "owner/repo"
       description:
-        en_US: "Format: owner/repo"
+        en_US: "GitHub repository in format owner/repo"
 
     - name: events
       type: checkbox
@@ -121,24 +122,46 @@ subscription_constructor:
         en_US: Personal access token with webhook permissions
       url: https://github.com/settings/tokens
 
-# Optional: OAuth support
-oauth_schema:
-  client_schema:
-    - name: client_id
-      type: secret-input
-      required: true
-      url: https://github.com/settings/applications/new
-    - name: client_secret
-      type: secret-input
-      required: true
-    - name: scope
-      type: text-input
-      default: "read:user admin:repo_hook"
+  # Optional: OAuth support
+  oauth_schema:
+    client_schema:
+      - name: client_id
+        type: secret-input
+        required: true
+        url: https://github.com/settings/applications/new
+        label:
+          en_US: Client ID
+      - name: client_secret
+        type: secret-input
+        required: true
+        label:
+          en_US: Client Secret
+      - name: scope
+        type: text-input
+        default: "read:user admin:repo_hook"
+        label:
+          en_US: OAuth Scope
+    credentials_schema:
+      - name: access_tokens
+        type: secret-input
+        label:
+          en_US: Access Token
 
 events:
   - events/push/push.yaml
   - events/issues/issues.yaml
   - events/pull_request/pull_request.yaml
+
+# identity section at the bottom
+identity:
+  author: your-name
+  name: my_trigger
+  label:
+    en_US: My Trigger
+    zh_Hans: 我的触发器
+  description:
+    en_US: Receives webhook events from external service
+  icon: icon.svg
 
 extra:
   python:
@@ -414,6 +437,52 @@ class MySubscriptionConstructor(TriggerSubscriptionConstructor):
             return UnsubscribeResult(success=True, message="Webhook deleted")
         except httpx.HTTPError as e:
             return UnsubscribeResult(success=False, message=str(e))
+
+    def _refresh_subscription(
+        self,
+        subscription: Subscription,
+        credentials: Mapping[str, Any],
+        credential_type: CredentialType
+    ) -> Subscription:
+        """Refresh subscription expiration (called periodically)"""
+        import time
+        WEBHOOK_TTL = 30 * 24 * 60 * 60  # 30 days
+        return Subscription(
+            expires_at=int(time.time()) + WEBHOOK_TTL,
+            endpoint=subscription.endpoint,
+            parameters=subscription.parameters,
+            properties=subscription.properties,
+        )
+
+    def _fetch_parameter_options(
+        self,
+        parameter: str,
+        credentials: Mapping[str, Any],
+        credential_type: CredentialType
+    ) -> list:
+        """Fetch dynamic options for parameters (e.g., repository list)"""
+        from dify_plugin.entities import I18nObject, ParameterOption
+
+        if parameter != "repository":
+            return []
+
+        token = credentials.get("access_token")
+        # Fetch repositories from API
+        response = httpx.get(
+            "https://api.example.com/user/repos",
+            headers={"Authorization": f"Bearer {token}"},
+            timeout=10
+        )
+        repos = response.json()
+
+        return [
+            ParameterOption(
+                value=repo["full_name"],
+                label=I18nObject(en_US=repo["full_name"]),
+                icon=repo.get("owner", {}).get("avatar_url")
+            )
+            for repo in repos
+        ]
 ```
 
 ## Event Handler Implementation

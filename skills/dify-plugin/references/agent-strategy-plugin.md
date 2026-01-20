@@ -56,9 +56,6 @@ resource:
     model:
       enabled: true              # Agent needs model access
       llm: true
-
-tags:
-  - agent
 ```
 
 ## provider.yaml
@@ -98,12 +95,12 @@ description:
   zh_Hans: 使用模型原生函数调用能力的 Agent 策略
 
 features:
-  - history-messages             # Supports conversation history
+  - agent-loop-status            # Shows agent loop progress in UI
 
 parameters:
   - name: model
     type: model-selector
-    scope: tool-call&llm         # Model must support tool calling
+    scope: tool-call             # Model must support tool calling
     required: true
     label:
       en_US: Model
@@ -439,7 +436,7 @@ result = self.session.tool.invoke(
 
 ```yaml
 features:
-  - history-messages    # Supports conversation history
+  - agent-loop-status   # Shows agent loop progress in UI
 ```
 
 ## Best Practices

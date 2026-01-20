@@ -47,20 +47,26 @@ plugins:
     - group/my_group.yaml
 
 resource:
-  memory: 268435456
-
-tags:
-  - utilities
+  memory: 1048576
+  permission:
+    tool:
+      enabled: false
+    model:
+      enabled: false
+    endpoint:
+      enabled: true            # Required for extensions
+    app:
+      enabled: true            # Enable to invoke Dify apps
+    storage:
+      enabled: true            # Enable for persistent storage
+      size: 1048576
 ```
 
 ## group.yaml
 
-```yaml
-name: my_api_group
-label:
-  en_US: My API Group
-  zh_Hans: 我的 API 组
+Note: No root-level `name` or `label` fields in group.yaml.
 
+```yaml
 # Optional: Settings schema for endpoint configuration
 settings:
   - name: api_key
@@ -71,6 +77,15 @@ settings:
     help:
       en_US: API key for authentication
 
+  - name: app
+    type: app-selector          # Special type: select a Dify app
+    scope: chat                  # Options: chat, completion, workflow, agent
+    required: false
+    label:
+      en_US: Dify App
+    help:
+      en_US: Select a Dify app to invoke from this endpoint
+
 endpoints:
   - endpoints/webhook.yaml
   - endpoints/callback.yaml
@@ -78,14 +93,11 @@ endpoints:
 
 ## endpoint.yaml
 
+Note: Official implementations use minimal endpoint.yaml without `label` or `description`.
+
 ```yaml
 path: "/webhook"
 method: "POST"
-label:
-  en_US: Webhook Receiver
-  zh_Hans: Webhook 接收器
-description:
-  en_US: Receives webhook events from external services
 
 extra:
   python:
@@ -362,6 +374,58 @@ Response(
 )
 ```
 
+## Invoking Dify Apps
+
+Extensions can invoke Dify apps (chat, completion, workflow) when `permission.app.enabled: true`:
+
+```python
+from collections.abc import Generator
+from werkzeug import Request, Response
+from dify_plugin.interfaces.endpoint import Endpoint
+import json
+
+class ChatEndpoint(Endpoint):
+    def _invoke(
+        self,
+        request: Request,
+        values: dict,
+        settings: dict
+    ) -> Response:
+        # Get app ID from settings (app-selector type)
+        app_id = settings.get("app", {}).get("app_id")
+        if not app_id:
+            return Response(
+                response=json.dumps({"error": "No app configured"}),
+                status=400,
+                mimetype="application/json"
+            )
+
+        data = request.get_json(force=True)
+        query = data.get("query", "")
+
+        # Invoke Dify chat app
+        response_text = ""
+        for chunk in self.session.app.chat.invoke(
+            app_id=app_id,
+            query=query,
+            inputs={},                    # Optional workflow inputs
+            conversation_id="",           # Empty for new conversation
+        ):
+            # chunk is a generator yielding response pieces
+            response_text += chunk.get("answer", "")
+
+        return Response(
+            response=json.dumps({"answer": response_text}),
+            status=200,
+            mimetype="application/json"
+        )
+```
+
+Available app invocation methods:
+- `self.session.app.chat.invoke()` - Chat apps
+- `self.session.app.completion.invoke()` - Completion apps
+- `self.session.app.workflow.invoke()` - Workflow apps
+
 ## Use Cases
 
 | Use Case | Path | Method | Description |
@@ -371,6 +435,7 @@ Response(
 | File upload | `/upload` | POST | Handle file uploads |
 | API proxy | `/api/<path>` | ANY | Proxy requests to external API |
 | Health check | `/health` | GET | Service status endpoint |
+| Chat gateway | `/chat` | POST | Invoke Dify app from endpoint |
 
 ## Best Practices
 
