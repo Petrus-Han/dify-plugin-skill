@@ -902,7 +902,74 @@ type RequestValidateToolCredentials struct {
 }
 ```
 
-#### 6.1.5 访问操作
+#### 6.1.5 工具返回值约定
+
+工具插件返回值使用流式响应，定义于 `pkg/entities/tool_entities/tool.go`:
+
+**核心响应结构**:
+
+```go
+type ToolResponseChunk struct {
+    Type    ToolResponseChunkType `json:"type"`    // 响应类型
+    Message map[string]any        `json:"message"` // 消息内容
+    Meta    map[string]any        `json:"meta"`    // 元数据
+}
+```
+
+**支持的返回类型**:
+
+| 类型常量 | 值 | 说明 |
+|---------|-----|------|
+| `ToolResponseChunkTypeText` | `text` | 文本内容 |
+| `ToolResponseChunkTypeJson` | `json` | JSON 数据 |
+| `ToolResponseChunkTypeFile` | `file` | 文件 |
+| `ToolResponseChunkTypeBlob` | `blob` | 二进制数据 |
+| `ToolResponseChunkTypeBlobChunk` | `blob_chunk` | 流式二进制块 (用于大文件传输) |
+| `ToolResponseChunkTypeLink` | `link` | 链接 |
+| `ToolResponseChunkTypeImage` | `image` | 图片 |
+| `ToolResponseChunkTypeImageLink` | `image_link` | 图片链接 |
+| `ToolResponseChunkTypeVariable` | `variable` | 变量 |
+| `ToolResponseChunkTypeLog` | `log` | 日志 |
+| `ToolResponseChunkTypeRetrieverResources` | `retriever_resources` | 检索资源 |
+
+**输出 Schema 定义** (可选):
+
+工具可以在声明中定义输出 JSON Schema:
+
+```go
+type ToolDeclaration struct {
+    // ...
+    OutputSchema ToolOutputSchema `json:"output_schema,omitempty" yaml:"output_schema,omitempty"`
+}
+```
+
+YAML 示例:
+```yaml
+output_schema:
+  type: object
+  properties:
+    result:
+      type: string
+    count:
+      type: number
+```
+
+**Blob 传输限制**:
+
+对于大文件传输，使用 `blob_chunk` 类型进行流式传输:
+
+| 限制项 | 值 |
+|-------|-----|
+| 单个块最大 | 8 KB |
+| 单个文件最大 | 15 MB |
+
+`blob_chunk` 消息字段:
+- `id`: 唯一标识符
+- `blob`: Base64 编码的数据块
+- `total_length`: 文件总长度
+- `end`: 是否为最后一块 (boolean)
+
+#### 6.1.6 访问操作
 
 | 操作 | 说明 |
 |-----|------|
@@ -1300,7 +1367,7 @@ type RequestInvokeEndpoint struct {
 plugin-name/
 ├── manifest.yaml                    # 插件清单
 ├── README.md                        # 说明文档
-├── pyproject.toml                   # Python 依赖 (uv)
+├── requirements.txt                 # Python 依赖
 ├── _assets/
 │   └── icon.svg                     # 插件图标
 ├── provider/
@@ -1326,7 +1393,7 @@ plugins:
 plugin-name/
 ├── manifest.yaml
 ├── README.md
-├── pyproject.toml
+├── requirements.txt
 ├── _assets/
 │   └── icon.svg
 ├── provider/
@@ -1370,7 +1437,7 @@ plugins:
 plugin-name/
 ├── manifest.yaml
 ├── README.md
-├── pyproject.toml
+├── requirements.txt
 ├── _assets/
 │   └── icon.svg
 ├── group/
@@ -1395,7 +1462,7 @@ plugins:
 plugin-name/
 ├── manifest.yaml
 ├── README.md
-├── pyproject.toml
+├── requirements.txt
 ├── _assets/
 │   └── icon.svg
 ├── provider/
@@ -1420,7 +1487,7 @@ plugins:
 plugin-name/
 ├── manifest.yaml
 ├── README.md
-├── pyproject.toml
+├── requirements.txt
 ├── _assets/
 │   └── icon.svg
 ├── provider/
@@ -1445,7 +1512,7 @@ plugins:
 plugin-name/
 ├── manifest.yaml
 ├── README.md
-├── pyproject.toml
+├── requirements.txt
 ├── _assets/
 │   └── icon.svg
 ├── provider/
@@ -1483,7 +1550,7 @@ plugins:
 | 文件 | 用途 |
 |-----|------|
 | `manifest.yaml` | 插件元数据、版本、权限声明 |
-| `pyproject.toml` | Python 依赖 (uv 管理) |
+| `requirements.txt` | Python 依赖列表 |
 | `README.md` | 插件说明文档 |
 | `_assets/icon.svg` | 插件图标（SVG 格式） |
 | `*.yaml` | 声明文件（参数、schema、i18n） |
