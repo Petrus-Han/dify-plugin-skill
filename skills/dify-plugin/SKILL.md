@@ -50,7 +50,7 @@ dify plugin package ./my-plugin
 
 ```
 my-plugin/
-├── manifest.yaml          # Plugin metadata
+├── manifest.yaml          # Plugin metadata (see MANIFEST_REFERENCE.md)
 ├── main.py               # Entry: plugin = Plugin(DifyPluginEnv())
 ├── pyproject.toml        # Dependencies (uv)
 ├── provider/
@@ -62,6 +62,8 @@ my-plugin/
 └── _assets/
     └── icon.svg
 ```
+
+**Important**: For complete manifest.yaml field rules, validation constraints, and examples, see [MANIFEST_REFERENCE.md](references/MANIFEST_REFERENCE.md).
 
 ## Valid Tags
 
@@ -75,12 +77,19 @@ Only 19 tags accepted: `search`, `image`, `videos`, `weather`, `finance`, `desig
 
 ## References
 
+### Core References
+- [MANIFEST_REFERENCE.md](references/MANIFEST_REFERENCE.md) - **Complete manifest.yaml reference** (field rules, validation, examples)
+- [PLUGIN_ARCHITECTURE.md](references/PLUGIN_ARCHITECTURE.md) - **Plugin architecture deep dive** (lifecycle, hooks, runtime, directory structures)
+
+### Plugin Type References
 - [tool-plugin.md](references/tool-plugin.md) - Tool plugin details
 - [trigger-plugin.md](references/trigger-plugin.md) - Trigger plugin details
 - [model-plugin.md](references/model-plugin.md) - Model plugin details
 - [extension-plugin.md](references/extension-plugin.md) - Extension plugin details
 - [datasource-plugin.md](references/datasource-plugin.md) - Datasource plugin details
 - [agent-strategy-plugin.md](references/agent-strategy-plugin.md) - Agent Strategy plugin details
-- [yaml-schemas.md](references/yaml-schemas.md) - Complete YAML templates
+
+### Additional References
+- [yaml-schemas.md](references/yaml-schemas.md) - Common YAML patterns
 - [plugins_reference.md](references/plugins_reference.md) - Official plugin examples
 - [debugging.md](references/debugging.md) - Debugging techniques
