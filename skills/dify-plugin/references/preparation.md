@@ -1,153 +1,94 @@
-# Dify Plugin Development Cheatsheet
+# Environment Setup
 
-> A comprehensive reference guide for Dify plugin development, including environment requirements, installation methods, development process, plugin categories and types, common code snippets, and solutions to common issues. Suitable for developers to quickly consult and reference.
+## Quick Setup (Recommended)
 
-### Environment Requirements
+Run the setup script to install all dependencies:
 
-* Python version ≥ 3.12
-* Dify plugin scaffold tool (dify-plugin-daemon)
+```bash
+# From skill directory
+./scripts/setup_env.sh
+```
 
-> Learn more: [Initializing Development Tools](/en/develop-plugin/getting-started/cli)
+This will:
+1. Check Python version (3.12+ required)
+2. Install `dify` CLI
+3. Install `uv` (Python package manager)
 
-### Obtaining the Dify Plugin Development Package
+## Manual Setup
 
-[Dify Plugin CLI](https://github.com/langgenius/dify-plugin-daemon/releases)
+If the script fails, follow these steps manually.
 
-#### Installation Methods for Different Platforms
+### 1. Install Dify CLI
 
-**macOS [Brew](https://github.com/langgenius/homebrew-dify) (Global Installation):**
-
-```bash  theme={null}
+**macOS (Homebrew):**
+```bash
 brew tap langgenius/dify
 brew install dify
 ```
 
-After installation, open a new terminal window and enter the `dify version` command. If it outputs the version information, the installation was successful.
+**macOS/Linux (Manual Download):**
+```bash
+# Download from: https://github.com/langgenius/dify-plugin-daemon/releases
 
-**macOS ARM (M Series Chips):**
-
-```bash  theme={null}
-# Download dify-plugin-darwin-arm64
-chmod +x dify-plugin-darwin-arm64
-./dify-plugin-darwin-arm64 version
-```
-
-**macOS Intel:**
-
-```bash  theme={null}
-# Download dify-plugin-darwin-amd64
-chmod +x dify-plugin-darwin-amd64
-./dify-plugin-darwin-amd64 version
-```
-
-**Linux:**
-
-```bash  theme={null}
-# Download dify-plugin-linux-amd64
-chmod +x dify-plugin-linux-amd64
-./dify-plugin-linux-amd64 version
-```
-
-**Global Installation (Recommended):**
-
-```bash  theme={null}
-# Rename and move to system path
-# Example (macOS ARM)
-mv dify-plugin-darwin-arm64 dify
+# macOS ARM (M series)
+curl -fsSL https://github.com/langgenius/dify-plugin-daemon/releases/latest/download/dify-plugin-darwin-arm64 -o dify
+chmod +x dify
 sudo mv dify /usr/local/bin/
-dify version
+
+# macOS Intel
+curl -fsSL https://github.com/langgenius/dify-plugin-daemon/releases/latest/download/dify-plugin-darwin-amd64 -o dify
+chmod +x dify
+sudo mv dify /usr/local/bin/
+
+# Linux AMD64
+curl -fsSL https://github.com/langgenius/dify-plugin-daemon/releases/latest/download/dify-plugin-linux-amd64 -o dify
+chmod +x dify
+sudo mv dify /usr/local/bin/
 ```
 
-### Running the Development Package
+Verify: `dify version`
 
-Here we use `dify` as an example. If you are using a local installation method, please replace the command accordingly, for example `./dify-plugin-darwin-arm64 plugin init`.
+### 2. Install uv
 
-### Plugin Development Process
-
-#### 1. Create a New Plugin
-
-```bash  theme={null}
-./dify plugin init
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-Follow the prompts to complete the basic plugin information configuration
+Add to PATH if needed: `export PATH="$HOME/.local/bin:$PATH"`
 
-> Learn more: [Dify Plugin Development: Hello World Guide](/en/develop-plugin/dev-guides-and-walkthroughs/tool-plugin)
+Verify: `uv --version`
 
-#### 2. Run in Development Mode
+### 3. Check Python
 
-Configure the `.env` file, then run the following command in the plugin directory:
-
-```bash  theme={null}
-python -m main
+```bash
+python3 --version  # Should be 3.12+
 ```
 
-> Learn more: [Remote Debugging Plugins](/en/develop-plugin/features-and-specs/plugin-types/remote-debug-a-plugin)
+## Create Plugin Project
 
-#### 3. Packaging and Deployment
+```bash
+# Interactive mode
+dify plugin init
 
-Package the plugin:
-
-```bash  theme={null}
-cd ..
-dify plugin package ./yourapp
+# Setup Python environment
+cd my-plugin
+uv init --no-readme
+uv add dify_plugin
 ```
 
-> Learn more: [Publishing Overview](/en/develop-plugin/publishing/marketplace-listing/release-overview)
+## Verify Installation
 
-### Plugin Categories
-
-#### Tool Labels
-
-Category `tag` [class ToolLabelEnum(Enum)](https://github.com/langgenius/dify-plugin-sdks/blob/main/python/dify_plugin/entities/tool.py)
-
-```python  theme={null}
-class ToolLabelEnum(Enum):
-    SEARCH = "search"
-    IMAGE = "image"
-    VIDEOS = "videos"
-    WEATHER = "weather"
-    FINANCE = "finance"
-    DESIGN = "design"
-    TRAVEL = "travel"
-    SOCIAL = "social"
-    NEWS = "news"
-    MEDICAL = "medical"
-    PRODUCTIVITY = "productivity"
-    EDUCATION = "education"
-    BUSINESS = "business"
-    ENTERTAINMENT = "entertainment"
-    UTILITIES = "utilities"
-    OTHER = "other"
+```bash
+dify version          # CLI version
+uv --version          # Package manager
+python3 --version     # Python 3.12+
 ```
 
-### Plugin Type Reference
+## Troubleshooting
 
-Dify supports the development of various types of plugins:
-
-* **Tool plugin**: Integrate third-party APIs and services
-  > Learn more: [Dify Plugin Development: Hello World Guide](/en/develop-plugin/dev-guides-and-walkthroughs/tool-plugin)
-
-* **Model plugin**: Integrate AI models
-  > Learn more: [Model Plugin](/en/develop-plugin/features-and-specs/plugin-types/model-designing-rules), [Quick Integration of a New Model](/en/develop-plugin/dev-guides-and-walkthroughs/creating-new-model-provider)
-
-* **Agent strategy plugin**: Customize Agent thinking and decision-making strategies
-  > Learn more: [Agent Strategy Plugin](/en/develop-plugin/features-and-specs/advanced-development/reverse-invocation)
-
-* **Extension plugin**: Extend Dify platform functionality, such as Endpoints and WebAPP
-  > Learn more: [Extension Plugin](/en/develop-plugin/dev-guides-and-walkthroughs/endpoint)
-
-* **Data source plugin**: Serve as the document data source and starting point for knowledge pipelines
-  > Learn more: [Data Source Plugin](/en/develop-plugin/dev-guides-and-walkthroughs/datasource-plugin)
-
-* **Trigger plugin**: Automatically trigger Workflow execution upon third-party events
-  > Learn more: [Trigger Plugin](/en/develop-plugin/dev-guides-and-walkthroughs/trigger-plugin)
-
-***
-
-[Edit this page](https://github.com/langgenius/dify-docs/edit/main/en/develop-plugin/dev-guides-and-walkthroughs/cheatsheet.mdx) | [Report an issue](https://github.com/langgenius/dify-docs/issues/new?template=docs.yml)
-
-
----
-
-> To find navigation and other pages in this documentation, fetch the llms.txt file at: https://docs.dify.ai/llms.txt
+| Issue | Solution |
+|-------|----------|
+| `dify: command not found` | Add `/usr/local/bin` to PATH or reinstall |
+| `uv: command not found` | Add `~/.local/bin` to PATH |
+| Python < 3.12 | Install Python 3.12+ via pyenv or system package |
+| Permission denied | Use `sudo` for `/usr/local/bin` install |
