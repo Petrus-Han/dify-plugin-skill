@@ -163,9 +163,34 @@ docker compose down -v
    ```
 
 3. **Run Plugin**
+
+   Use the debug script to automatically kill any previous debug process before starting:
+
    ```bash
+   # Recommended: auto-kills previous process
+   ./scripts/debug.sh
+
+   # Or use directly (won't auto-kill previous process)
    uv run python -m main
    ```
+
+   **Debug script options:**
+   ```bash
+   # Kill existing debug process without starting new one
+   ./scripts/debug.sh --kill-only
+
+   # Check if a debug process is running
+   ./scripts/debug.sh --status
+
+   # Show help
+   ./scripts/debug.sh --help
+   ```
+
+   The debug script:
+   - Automatically finds and kills any existing debug process for the current plugin
+   - Stores process ID in `.debug.pid` for reliable process management
+   - Handles graceful shutdown with fallback to force-kill
+   - Properly cleans up on Ctrl+C
 
 ## Common Issues
 

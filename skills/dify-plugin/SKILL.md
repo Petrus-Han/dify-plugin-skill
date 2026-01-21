@@ -75,7 +75,10 @@ python scripts/get_debug_key.py
 # Output directly to plugin's .env file
 python scripts/get_debug_key.py --output-env > .env
 
-# Run plugin in debug mode
+# Run plugin in debug mode (auto-kills previous process)
+./scripts/debug.sh
+
+# Or use directly (won't auto-kill previous process)
 uv run python -m main
 ```
 
