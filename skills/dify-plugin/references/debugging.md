@@ -1,10 +1,134 @@
 # Debugging & Deployment
 
+## Local Integration Testing Environment
+
+For integration testing, we set up a local Dify instance using Docker Compose. This ensures version consistency between the plugin and Dify services.
+
+### 1. Sync Reference Repositories
+
+First, sync the three key reference repositories and switch to matching versions:
+
+```bash
+# From skill directory
+./scripts/sync_repos.sh
+```
+
+This script will:
+1. Clone/pull the repositories to `~/playground/dify-repo/`:
+   - `dify` - Dify core (docker compose host)
+   - `dify-plugin-daemon` - Plugin runtime & CLI
+   - `dify-official-plugins` - Official plugin examples
+2. Parse `docker-compose.yaml` to detect service versions
+3. Switch each repo to the corresponding git tag
+
+**Script options:**
+```bash
+./scripts/sync_repos.sh --pull-only       # Only pull, don't switch tags
+./scripts/sync_repos.sh --show-versions   # Show docker-compose image versions
+./scripts/sync_repos.sh --base /path/to   # Custom base directory
+```
+
+### 2. Start Dify Services
+
+```bash
+cd ~/playground/dify-repo/dify/docker
+
+# Copy environment file (first time only)
+cp .env.example .env
+
+# Start all services
+docker compose up -d
+
+# Check service status
+docker compose ps
+```
+
+**Key services started:**
+| Service | Port | Description |
+|---------|------|-------------|
+| nginx | 80/443 | Reverse proxy |
+| api | 5001 | Dify API server |
+| web | 3000 | Dify web frontend |
+| worker | - | Background task worker |
+| plugin_daemon | 5003 | Plugin daemon for debugging |
+| db | 5432 | PostgreSQL database |
+| redis | 6379 | Redis cache |
+
+**Access Dify:**
+- Web UI: http://localhost (or http://localhost:80)
+- API: http://localhost/console/api
+
+### 3. Initial Setup
+
+On first launch, create an admin account through the web UI:
+1. Open http://localhost in browser
+2. Follow the setup wizard to create admin account
+3. Note the email and password for later use
+
+### 4. Environment Variables
+
+Important `.env` settings for plugin development:
+
+```bash
+# Enable plugin daemon (already enabled by default)
+PLUGIN_DAEMON_ENABLED=true
+
+# Plugin daemon port (for remote debugging)
+PLUGIN_DAEMON_PORT=5003
+
+# Debug mode (optional, for verbose logging)
+DEBUG=true
+LOG_LEVEL=DEBUG
+```
+
+### 5. Upgrade Workflow
+
+When upgrading Dify version:
+
+```bash
+# 1. Sync repos and switch to new version
+./scripts/sync_repos.sh
+
+# 2. Stop current services
+cd ~/playground/dify-repo/dify/docker
+docker compose down
+
+# 3. Sync environment variables (optional but recommended)
+./dify-env-sync.sh
+
+# 4. Pull new images and restart
+docker compose pull
+docker compose up -d
+```
+
+### 6. Useful Commands
+
+```bash
+# View logs
+docker compose logs -f api          # API server logs
+docker compose logs -f plugin_daemon # Plugin daemon logs
+
+# Restart specific service
+docker compose restart plugin_daemon
+
+# Stop all services
+docker compose down
+
+# Stop and remove volumes (clean reset)
+docker compose down -v
+```
+
+---
+
 ## Remote Debugging Setup
 
 1. **Get Debug Credentials**
 
-   Ask user for:
+   For local instance (from above setup):
+   - Host URL: `http://localhost`
+   - Use the admin account created during initial setup
+
+   For remote instance, ask user for:
    - Dify host URL (e.g., `https://your-dify.com`)
    - Email and password (suggest creating a dedicated user/workspace for development)
 
