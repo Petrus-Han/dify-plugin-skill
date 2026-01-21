@@ -266,6 +266,13 @@ def _invoke(self, tool_parameters: dict[str, Any]):
 
 ## Error Handling
 
+**Important**: Execution status is determined by whether an exception is raised, NOT by message content.
+
+| Code Behavior | Execution Status |
+|---|---|
+| `yield self.create_text_message("Error...")` + normal return | SUCCESS |
+| `raise Exception("Error...")` | FAILURE |
+
 ```python
 from dify_plugin.errors.tool import (
     ToolProviderCredentialValidationError,
@@ -275,9 +282,18 @@ from dify_plugin.errors.tool import (
 # In provider validation
 raise ToolProviderCredentialValidationError("Invalid credentials")
 
-# In tool invocation
+# In tool invocation - use exceptions for real errors
 raise ToolInvokeError("Failed to process request")
+raise ValueError("Resource not found")  # Also works
+
+# ❌ Wrong - this still shows SUCCESS status
+yield self.create_text_message("Error: Resource not found")
+
+# ✅ Correct - this shows FAILURE status
+raise ValueError("Resource not found")
 ```
+
+See [best-practices.md](best-practices.md) for detailed error handling guidelines.
 
 ## Best Practices
 

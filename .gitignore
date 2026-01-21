@@ -34,7 +34,3 @@ test_output/
 
 # Claude Code local settings
 .claude/settings.local.json
-
-# Personal notes and plans
-plans.md
-plans-and-my-notes-*.d
