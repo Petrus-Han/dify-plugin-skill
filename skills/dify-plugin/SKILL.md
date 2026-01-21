@@ -7,11 +7,13 @@ description: Build Dify plugins (Tool, Trigger, Extension, Model, Datasource, Ag
 
 ## Key Reference Repositories
 
-| Repository | Path | Purpose |
-|------------|------|---------|
-| **dify-official-plugins** | `/Users/petrus/Source/dify/ee/dify-official-plugins` | Official plugin examples - study real implementations |
-| **dify-plugin-daemon** | `/Users/petrus/Source/dify/ee/dify-plugin-daemon` | Plugin runtime & CLI - check interface definitions |
-| **dify** | `/Users/petrus/Source/dify/ee/dify` | Dify core - remote debugging host |
+Sync with `./scripts/sync_repos.sh` (default: `~/playground/dify-repo/`):
+
+| Repository | Purpose |
+|------------|---------|
+| **dify-official-plugins** | Official plugin examples - study real implementations |
+| **dify-plugin-daemon** | Plugin runtime & CLI - understand how plugins are executed |
+| **dify** | Dify core - understand plugin invocation and workflow integration |
 
 ## Quick Decision: Which Plugin Type?
 
@@ -91,6 +93,22 @@ dify plugin package ./my-plugin
 | Runtime behavior, hooks | [PLUGIN_ARCHITECTURE.md](references/PLUGIN_ARCHITECTURE.md) |
 | Error handling patterns | [best-practices.md](references/best-practices.md) |
 | Working examples | [plugins_reference.md](references/plugins_reference.md) |
+
+### Troubleshooting with Reference Repositories
+
+When documentation is insufficient, sync the reference repos (see [preparation.md](references/preparation.md#reference-repositories-optional)):
+
+```bash
+./scripts/sync_repos.sh
+```
+
+**When to consult each repository:**
+
+| Repository | When to Use |
+|------------|-------------|
+| **dify-plugin-daemon** | Plugin runtime issues, understanding how plugins are loaded/executed, SDK interface definitions, debugging connection problems |
+| **dify** | Understanding how Dify invokes plugins, how plugins integrate with workflows, node execution context, API request/response flow |
+| **dify-official-plugins** | Implementation patterns, YAML structure examples, real-world credential handling |
 
 ## Core Structure
 

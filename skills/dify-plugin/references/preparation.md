@@ -92,3 +92,36 @@ python3 --version     # Python 3.12+
 | `uv: command not found` | Add `~/.local/bin` to PATH |
 | Python < 3.12 | Install Python 3.12+ via pyenv or system package |
 | Permission denied | Use `sudo` for `/usr/local/bin` install |
+
+## Reference Repositories (Optional)
+
+When the reference documentation is insufficient, sync these repositories for studying real implementations:
+
+```bash
+# From skill directory
+./scripts/sync_repos.sh
+```
+
+This script clones/pulls to `~/playground/dify-repo/`:
+
+| Repository | Purpose |
+|------------|---------|
+| **dify** | Dify core - docker compose host for integration testing |
+| **dify-plugin-daemon** | Plugin runtime & CLI - **check interface definitions here** |
+| **dify-official-plugins** | Official plugin examples - study real implementations |
+
+The script also:
+- Parses `docker-compose.yaml` to detect service versions
+- Switches each repo to the corresponding git tag for version consistency
+
+**Script options:**
+```bash
+./scripts/sync_repos.sh --pull-only       # Only pull, don't switch tags
+./scripts/sync_repos.sh --show-versions   # Show docker-compose image versions
+./scripts/sync_repos.sh --base /path/to   # Custom base directory
+```
+
+**Key reference paths in dify-plugin-daemon:**
+- `internal/core/plugin_daemon/` - Plugin daemon core logic
+- `internal/types/` - Type definitions and interfaces
+- `pkg/entities/` - Entity structures

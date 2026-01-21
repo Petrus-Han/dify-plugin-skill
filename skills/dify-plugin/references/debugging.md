@@ -6,26 +6,10 @@ For integration testing, we set up a local Dify instance using Docker Compose. T
 
 ### 1. Sync Reference Repositories
 
-First, sync the three key reference repositories and switch to matching versions:
+First, sync the reference repositories (see [preparation.md](./preparation.md#reference-repositories-optional) for details):
 
 ```bash
-# From skill directory
 ./scripts/sync_repos.sh
-```
-
-This script will:
-1. Clone/pull the repositories to `~/playground/dify-repo/`:
-   - `dify` - Dify core (docker compose host)
-   - `dify-plugin-daemon` - Plugin runtime & CLI
-   - `dify-official-plugins` - Official plugin examples
-2. Parse `docker-compose.yaml` to detect service versions
-3. Switch each repo to the corresponding git tag
-
-**Script options:**
-```bash
-./scripts/sync_repos.sh --pull-only       # Only pull, don't switch tags
-./scripts/sync_repos.sh --show-versions   # Show docker-compose image versions
-./scripts/sync_repos.sh --base /path/to   # Custom base directory
 ```
 
 ### 2. Start Dify Services
