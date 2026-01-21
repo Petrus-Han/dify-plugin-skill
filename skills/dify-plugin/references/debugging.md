@@ -108,29 +108,43 @@ docker compose down -v
 
 1. **Get Debug Credentials**
 
-   For local instance (from above setup):
+   The script automatically manages credentials via a `.credential` file:
+
+   ```bash
+   # First time: prompts for credentials interactively and saves to .credential
+   python scripts/get_debug_key.py
+
+   # Subsequent runs: automatically loads from .credential
+   python scripts/get_debug_key.py
+
+   # Output directly as .env format
+   python scripts/get_debug_key.py --output-env > .env
+   ```
+
+   **Credential file workflow:**
+   - First run: Script prompts for Dify host URL, email, and password
+   - Credentials are saved to `.credential` (JSON format, 600 permissions)
+   - `.credential` is gitignored to prevent accidental commits
+   - Subsequent runs automatically use saved credentials
+
+   **For local Dify instance:**
    - Host URL: `http://localhost`
    - Use the admin account created during initial setup
 
-   For remote instance, ask user for:
+   **For remote instance:**
    - Dify host URL (e.g., `https://your-dify.com`)
-   - Email and password (suggest creating a dedicated user/workspace for development)
+   - Suggest creating a dedicated user/workspace for development
 
-   Then run the script to get debugging key:
-
+   **Script options:**
    ```bash
-   # From skill directory
-   python scripts/get_debug_key.py \
-     --host https://your-dify.com \
-     --email user@example.com \
-     --password yourpassword
+   # Override specific credentials while using saved values for others
+   python scripts/get_debug_key.py --host https://new-host.com
 
-   # Or output directly as .env format
-   python scripts/get_debug_key.py \
-     --host https://your-dify.com \
-     --email user@example.com \
-     --password yourpassword \
-     --output-env > .env
+   # Specify custom credential file location
+   python scripts/get_debug_key.py --credential-file /path/to/.credential
+
+   # Don't save credentials (one-time use)
+   python scripts/get_debug_key.py --no-save --host <url> --email <email> --password <pwd>
    ```
 
    Script location: [scripts/get_debug_key.py](../scripts/get_debug_key.py)

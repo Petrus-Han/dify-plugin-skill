@@ -34,3 +34,6 @@ test_output/
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# Dify credentials (contains sensitive login info)
+.credential

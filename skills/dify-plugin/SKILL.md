@@ -65,16 +65,24 @@ uv add dify_plugin
 5. Create tool/event definitions and implementations
 
 ### Phase 4: Test & Debug
-```bash
-# Get debug credentials (asks for Dify host, email, password)
-python scripts/get_debug_key.py --host <dify-url> --email <email> --password <password>
 
-# Or output directly to .env
-python scripts/get_debug_key.py --host <url> --email <email> --password <pwd> --output-env > .env
+**Important**: Before debugging, Claude should automatically fetch the debug key using saved credentials. If credentials don't exist, prompt the user once and save to `.credential`.
+
+```bash
+# Get debug key (auto-loads from .credential, or prompts first time)
+python scripts/get_debug_key.py
+
+# Output directly to plugin's .env file
+python scripts/get_debug_key.py --output-env > .env
 
 # Run plugin in debug mode
 uv run python -m main
 ```
+
+**Credential workflow:**
+- First time: Script prompts for Dify host, email, password → saves to `.credential`
+- Subsequent runs: Automatically uses saved credentials
+- `.credential` is gitignored (contains sensitive login info)
 
 See [debugging.md](references/debugging.md) for detailed debugging guide.
 
