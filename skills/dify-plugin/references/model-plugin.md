@@ -6,21 +6,39 @@ Model plugins add AI model providers (LLM, Embedding, TTS, etc.) to Dify.
 
 ```
 my-model/
-├── manifest.yaml
-├── main.py
-├── pyproject.toml
+├── manifest.yaml                # Plugin manifest
+├── main.py                      # Entry point
+├── pyproject.toml               # Dependencies (uv)
+├── README.md                    # Documentation
+├── _assets/
+│   ├── icon_s_en.svg            # Small icon
+│   └── icon_l_en.png            # Large icon
 ├── provider/
-│   ├── my_provider.yaml      # Provider config
-│   └── my_provider.py        # Provider validation
-├── models/
-│   └── llm/
-│       ├── _position.yaml    # Model ordering
-│       ├── model-name.yaml   # Model definition
-│       └── llm.py           # LLM implementation
-└── _assets/
-    ├── icon_s_en.svg        # Small icon
-    └── icon_l_en.png        # Large icon
+│   ├── {provider_name}.yaml     # Provider config
+│   └── {provider_name}.py       # Provider validation
+└── models/
+    ├── llm/                     # Large Language Model
+    │   ├── _position.yaml       # Model ordering
+    │   ├── {model_name}.yaml    # Model definition
+    │   └── llm.py               # LLM implementation
+    ├── text_embedding/          # Text Embedding
+    │   ├── text_embedding.yaml
+    │   └── text_embedding.py
+    ├── rerank/                  # Reranking
+    │   ├── rerank.yaml
+    │   └── rerank.py
+    ├── tts/                     # Text-to-Speech
+    │   ├── tts.yaml
+    │   └── tts.py
+    ├── speech2text/             # Speech-to-Text
+    │   ├── speech2text.yaml
+    │   └── speech2text.py
+    └── moderation/              # Content Moderation
+        ├── moderation.yaml
+        └── moderation.py
 ```
+
+**Note**: You don't need all model types. Create only the subdirectories you need.
 
 ## manifest.yaml
 
@@ -378,14 +396,24 @@ class MyLLM(LargeLanguageModel):
 
 ## Model Types
 
-| Type | Base Class | Purpose |
-|------|------------|---------|
-| LLM | `LargeLanguageModel` | Text generation, chat |
-| Embedding | `TextEmbeddingModel` | Text embeddings |
-| TTS | `TTSModel` | Text-to-speech |
-| Speech2Text | `Speech2TextModel` | Speech recognition |
-| Moderation | `ModerationModel` | Content moderation |
-| Rerank | `RerankModel` | Document reranking |
+| Type Value | Base Class | Purpose |
+|------------|------------|---------|
+| `llm` | `LargeLanguageModel` | Text generation, chat |
+| `text-embedding` | `TextEmbeddingModel` | Text embeddings |
+| `tts` | `TTSModel` | Text-to-speech |
+| `speech2text` | `Speech2TextModel` | Speech recognition |
+| `moderation` | `ModerationModel` | Content moderation |
+| `rerank` | `RerankModel` | Document reranking |
+| `text2img` | `Text2ImageModel` | Text to image generation |
+| `multimodal-embedding` | `MultimodalEmbeddingModel` | Multimodal embeddings |
+| `multimodal-rerank` | `MultimodalRerankModel` | Multimodal reranking |
+
+## Configuration Methods
+
+| Method | Description |
+|--------|-------------|
+| `predefined-model` | Use provider-level credentials for predefined models |
+| `customizable-model` | Allow custom model names with per-model credentials |
 
 ## Error Handling
 

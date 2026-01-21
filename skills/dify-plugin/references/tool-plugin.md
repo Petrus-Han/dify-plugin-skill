@@ -6,17 +6,18 @@ Tool plugins integrate external APIs into Dify workflows.
 
 ```
 my-tool/
-├── manifest.yaml           # Plugin metadata
-├── main.py                # Entry: plugin = Plugin(DifyPluginEnv())
-├── pyproject.toml         # Dependencies (uv)
+├── manifest.yaml                # Plugin manifest
+├── main.py                      # Entry: plugin = Plugin(DifyPluginEnv())
+├── pyproject.toml               # Dependencies (uv)
+├── README.md                    # Documentation
+├── _assets/
+│   └── icon.svg                 # Plugin icon
 ├── provider/
-│   ├── my_provider.yaml   # Provider config + credentials
-│   └── my_provider.py     # Provider validation (optional)
-├── tools/
-│   ├── tool_name.yaml     # Tool definition
-│   └── tool_name.py       # Tool implementation
-└── _assets/
-    └── icon.svg
+│   ├── {provider_name}.yaml     # Provider config (credentials)
+│   └── {provider_name}.py       # Provider validation logic
+└── tools/
+    ├── {tool_name}.yaml         # Tool definition (parameters)
+    └── {tool_name}.py           # Tool implementation (invoke method)
 ```
 
 ## manifest.yaml
@@ -228,8 +229,40 @@ class MyProvider(ToolProvider):
 | `secret-input` | Encrypted | api_key |
 | `file` | Single file | document |
 | `files` | Multiple files | images |
+| `app-selector` | Dify app picker | app reference |
+| `model-selector` | Model picker | LLM selection |
+| `dynamic-select` | Fetches options dynamically | repository list |
+| `array` | Array of values | list of items |
+| `object` | Nested object | complex config |
+| `checkbox` | Multiple selection | event types |
+| `any` | Flexible type | context data |
+
+### Parameter Form Types
+
+| Form | Description |
+|------|-------------|
+| `schema` | Defined by JSON schema |
+| `form` | User fills in UI form |
+| `llm` | LLM fills automatically |
 
 ## Message Types
+
+### Response Type Reference
+
+| Type | Method | Use Case |
+|------|--------|----------|
+| `text` | `create_text_message` | Plain text content |
+| `json` | `create_json_message` | Structured data (preferred) |
+| `link` | `create_link_message` | URL references |
+| `blob` | `create_blob_message` | Binary data (images, files) |
+| `blob_chunk` | (streaming) | Large file streaming transfer |
+| `image` | `create_image_message` | Image data |
+| `image_link` | (via json) | Image URL reference |
+| `file` | `create_file_message` | File reference |
+| `variable` | `create_variable_message` | Workflow variables |
+| `log` | `create_log_message` | Execution logs |
+
+### Usage Examples
 
 ```python
 # Text response
@@ -247,6 +280,21 @@ yield self.create_blob_message(
     meta={"mime_type": "image/png", "file_name": "result.png"}
 )
 ```
+
+### Blob Transmission Limits
+
+For large file transfers using `blob_chunk`:
+
+| Limit | Value |
+|-------|-------|
+| Single chunk max | 8 KB |
+| Single file max | 15 MB |
+
+Blob chunk message fields:
+- `id`: Unique identifier
+- `blob`: Base64 encoded data chunk
+- `total_length`: Total file length
+- `end`: Boolean indicating last chunk
 
 ## Using LLM in Tools
 

@@ -6,18 +6,17 @@ Extension plugins add custom HTTP endpoints to Dify for OAuth callbacks, webhook
 
 ```
 my-extension/
-├── manifest.yaml
-├── main.py
-├── pyproject.toml
+├── manifest.yaml                # Plugin manifest
+├── main.py                      # Entry point
+├── pyproject.toml               # Dependencies (uv)
+├── README.md                    # Documentation
+├── _assets/
+│   └── icon.svg                 # Plugin icon
 ├── group/
-│   └── my_group.yaml         # Endpoint group config
-├── endpoints/
-│   ├── webhook.yaml          # Endpoint definition
-│   ├── webhook.py            # Endpoint handler
-│   ├── callback.yaml
-│   └── callback.py
-└── _assets/
-    └── icon.svg
+│   └── {group_name}.yaml        # Endpoint group config (settings)
+└── endpoints/
+    ├── {endpoint_name}.yaml     # Endpoint definition (path, method)
+    └── {endpoint_name}.py       # Endpoint implementation (HTTP handler)
 ```
 
 ## manifest.yaml
@@ -332,11 +331,14 @@ class ItemEndpoint(Endpoint):
 
 | Method | Use Case |
 |--------|----------|
+| `HEAD` | Check resource existence |
 | `GET` | Retrieve data, OAuth callbacks |
 | `POST` | Webhooks, file uploads, create resources |
 | `PUT` | Update resources |
 | `DELETE` | Delete resources |
-| `PATCH` | Partial updates |
+| `OPTIONS` | CORS preflight requests |
+
+**Note**: `PATCH` is not in the official supported methods list.
 
 ## Response Helpers
 

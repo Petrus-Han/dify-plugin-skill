@@ -4,26 +4,37 @@ Datasource plugins connect external data sources (cloud storage, documents, data
 
 ## Provider Types
 
-| Type | Base Class | Use Case |
-|------|------------|----------|
+| Type Value | Base Class | Use Case |
+|------------|------------|----------|
 | `online_drive` | `OnlineDriveDatasource` | S3, Google Drive, Dropbox |
 | `online_document` | `OnlineDocumentDatasource` | GitHub, Notion, Confluence |
 | `website_crawl` | `WebsiteCrawlDatasource` | Firecrawl, Jina Reader |
+
+## Parameter Types
+
+| Type | Description |
+|------|-------------|
+| `string` | Text input |
+| `number` | Numeric value |
+| `boolean` | True/false toggle |
+| `select` | Dropdown selection |
+| `secret-input` | Encrypted credential input |
 
 ## File Structure
 
 ```
 my-datasource/
-├── manifest.yaml
-├── main.py
-├── pyproject.toml
+├── manifest.yaml                # Plugin manifest
+├── main.py                      # Entry point
+├── pyproject.toml               # Dependencies (uv)
+├── README.md                    # Documentation
+├── _assets/
+│   └── icon.svg                 # Plugin icon
 ├── provider/
-│   └── my_datasource.yaml     # Provider config + credentials
-├── datasources/
-│   ├── my_datasource.yaml     # Datasource definition
-│   └── my_datasource.py       # Datasource implementation
-└── _assets/
-    └── icon.svg
+│   └── {provider_name}.yaml     # Provider config (credentials)
+└── datasources/
+    ├── {datasource_name}.yaml   # Datasource definition
+    └── {datasource_name}.py     # Datasource implementation (Retrieve/RetrieveMany)
 ```
 
 ## manifest.yaml

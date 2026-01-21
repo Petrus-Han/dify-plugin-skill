@@ -1,144 +1,144 @@
-# Dify Plugin 工作原理详解
+# Dify Plugin Architecture Deep Dive
 
-本文档详细介绍 Dify Plugin Daemon 的插件系统工作原理，包括生命周期、钩子函数和变量约定。
+This document provides detailed information about the Dify Plugin Daemon's plugin system internals, including lifecycle, hooks, and configuration conventions.
 
-## 目录
+## Table of Contents
 
-1. [插件类型概述](#1-插件类型概述)
-2. [运行时类型](#2-运行时类型)
-3. [插件生命周期](#3-插件生命周期)
-4. [钩子函数与回调机制](#4-钩子函数与回调机制)
-5. [变量约定与配置](#5-变量约定与配置)
-6. [各类型插件详解](#6-各类型插件详解)
-7. [插件目录结构](#7-插件目录结构)
+1. [Plugin Types Overview](#1-plugin-types-overview)
+2. [Runtime Types](#2-runtime-types)
+3. [Plugin Lifecycle](#3-plugin-lifecycle)
+4. [Hooks and Callback Mechanisms](#4-hooks-and-callback-mechanisms)
+5. [Variables and Configuration](#5-variables-and-configuration)
+6. [Plugin Type Reference](#6-plugin-type-reference)
+7. [Plugin Directory Structure](#7-plugin-directory-structure)
 
 ---
 
-## 1. 插件类型概述
+## 1. Plugin Types Overview
 
-Dify 支持六种主要插件类型，定义于 `pkg/entities/plugin_entities/plugin_declaration.go`:
+Dify supports six main plugin types, defined in `pkg/entities/plugin_entities/plugin_declaration.go`:
 
 ```go
 type PluginCategory string
 
 const (
-    PLUGIN_CATEGORY_TOOL           PluginCategory = "tool"           // 工具插件
-    PLUGIN_CATEGORY_MODEL          PluginCategory = "model"          // 模型插件
-    PLUGIN_CATEGORY_EXTENSION      PluginCategory = "extension"      // 扩展插件
-    PLUGIN_CATEGORY_AGENT_STRATEGY PluginCategory = "agent-strategy" // Agent策略插件
-    PLUGIN_CATEGORY_DATASOURCE     PluginCategory = "datasource"     // 数据源插件
-    PLUGIN_CATEGORY_TRIGGER        PluginCategory = "trigger"        // 触发器插件
+    PLUGIN_CATEGORY_TOOL           PluginCategory = "tool"           // Tool plugin
+    PLUGIN_CATEGORY_MODEL          PluginCategory = "model"          // Model plugin
+    PLUGIN_CATEGORY_EXTENSION      PluginCategory = "extension"      // Extension plugin
+    PLUGIN_CATEGORY_AGENT_STRATEGY PluginCategory = "agent-strategy" // Agent Strategy plugin
+    PLUGIN_CATEGORY_DATASOURCE     PluginCategory = "datasource"     // Datasource plugin
+    PLUGIN_CATEGORY_TRIGGER        PluginCategory = "trigger"        // Trigger plugin
 )
 ```
 
-### 1.1 插件类型互斥规则
+### 1.1 Plugin Type Mutual Exclusion Rules
 
-| 插件类型 | 可与其他类型组合 | 说明 |
-|---------|-----------------|------|
-| Tool | 是 (可与 Endpoint 组合) | 可复用工具函数 |
-| Model | 否 | 独占，提供 AI 模型能力 |
-| Agent Strategy | 否 | 独占，提供 Agent 推理策略 |
-| Datasource | 否 | 独占，提供数据源连接 |
-| Trigger | 否 | 独占，提供事件触发能力 |
-| Endpoint | 是 (可与 Tool 组合) | HTTP 端点扩展 |
+| Plugin Type | Can Combine with Others | Description |
+|-------------|------------------------|-------------|
+| Tool | Yes (can combine with Endpoint) | Reusable tool functions |
+| Model | No | Exclusive, provides AI model capabilities |
+| Agent Strategy | No | Exclusive, provides Agent reasoning strategies |
+| Datasource | No | Exclusive, provides data source connections |
+| Trigger | No | Exclusive, provides event triggering capabilities |
+| Endpoint | Yes (can combine with Tool) | HTTP endpoint extension |
 
 ---
 
-## 2. 运行时类型
+## 2. Runtime Types
 
-定义于 `pkg/entities/plugin_entities/runtime.go`:
+Defined in `pkg/entities/plugin_entities/runtime.go`:
 
 ```go
 type PluginRuntimeType string
 
 const (
-    PLUGIN_RUNTIME_TYPE_LOCAL      PluginRuntimeType = "local"      // 本地进程
-    PLUGIN_RUNTIME_TYPE_REMOTE     PluginRuntimeType = "remote"     // 远程调试
-    PLUGIN_RUNTIME_TYPE_SERVERLESS PluginRuntimeType = "serverless" // 无服务器
+    PLUGIN_RUNTIME_TYPE_LOCAL      PluginRuntimeType = "local"      // Local process
+    PLUGIN_RUNTIME_TYPE_REMOTE     PluginRuntimeType = "remote"     // Remote debugging
+    PLUGIN_RUNTIME_TYPE_SERVERLESS PluginRuntimeType = "serverless" // Serverless
 )
 ```
 
-### 2.1 运行时对比
+### 2.1 Runtime Comparison
 
-| 特性 | Local | Remote/Debug | Serverless |
-|-----|-------|--------------|------------|
-| 进程模型 | 子进程 | TCP 连接 | HTTP 请求 |
-| 通信协议 | STDIN/STDOUT (JSON) | TCP 二进制 + 换行符 | HTTP SSE |
-| 并发模式 | 多实例 (副本) | 单连接 | 按请求 |
-| 生命周期 | 长期进程 | 持久连接 | 无状态 |
-| 心跳超时 | 120 秒 | 60 秒 | 按请求超时 |
-| 负载均衡 | 轮询 | N/A | N/A |
-| 适用场景 | 生产部署 | 开发调试 | 云端部署 |
+| Feature | Local | Remote/Debug | Serverless |
+|---------|-------|--------------|------------|
+| Process Model | Subprocess | TCP Connection | HTTP Request |
+| Communication Protocol | STDIN/STDOUT (JSON) | TCP Binary + Newline | HTTP SSE |
+| Concurrency Mode | Multiple Instances (Replicas) | Single Connection | Per Request |
+| Lifecycle | Long-running Process | Persistent Connection | Stateless |
+| Heartbeat Timeout | 120 seconds | 60 seconds | Per Request Timeout |
+| Load Balancing | Round-robin | N/A | N/A |
+| Use Case | Production Deployment | Development/Debugging | Cloud Deployment |
 
-### 2.2 运行时状态
+### 2.2 Runtime Status
 
 ```go
 const (
-    PLUGIN_RUNTIME_STATUS_ACTIVE     = "active"     // 运行中
-    PLUGIN_RUNTIME_STATUS_LAUNCHING  = "launching"  // 启动中
-    PLUGIN_RUNTIME_STATUS_STOPPED    = "stopped"    // 已停止
-    PLUGIN_RUNTIME_STATUS_RESTARTING = "restarting" // 重启中
-    PLUGIN_RUNTIME_STATUS_PENDING    = "pending"    // 等待中
+    PLUGIN_RUNTIME_STATUS_ACTIVE     = "active"     // Running
+    PLUGIN_RUNTIME_STATUS_LAUNCHING  = "launching"  // Starting
+    PLUGIN_RUNTIME_STATUS_STOPPED    = "stopped"    // Stopped
+    PLUGIN_RUNTIME_STATUS_RESTARTING = "restarting" // Restarting
+    PLUGIN_RUNTIME_STATUS_PENDING    = "pending"    // Pending
 )
 ```
 
 ---
 
-## 3. 插件生命周期
+## 3. Plugin Lifecycle
 
-### 3.1 完整生命周期流程
+### 3.1 Complete Lifecycle Flow
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
-│                         安装阶段                                  │
+│                       Installation Phase                          │
 ├─────────────────────────────────────────────────────────────────┤
 │  1. InstallMultiplePluginsToTenant()                            │
 │     ↓                                                           │
-│  2. DisableAutoLaunch() - 防止 WatchDog 提前启动                  │
+│  2. DisableAutoLaunch() - Prevent WatchDog from starting early  │
 │     ↓                                                           │
-│  3. InstallToLocal() - 复制包到安装目录                           │
+│  3. InstallToLocal() - Copy package to install directory        │
 │     ↓                                                           │
-│  4. LaunchLocalPlugin() - 启动运行时                             │
+│  4. LaunchLocalPlugin() - Start runtime                         │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                         初始化阶段                                │
+│                      Initialization Phase                         │
 ├─────────────────────────────────────────────────────────────────┤
-│  5. AcquireLock + Semaphore - 获取锁和信号量                      │
+│  5. AcquireLock + Semaphore - Acquire lock and semaphore        │
 │     ↓                                                           │
-│  6. BuildRuntime() - 构建运行时实例                               │
+│  6. BuildRuntime() - Build runtime instance                     │
 │     ↓                                                           │
-│  7. AcquireDistributedLock (Redis) - 集群模式分布式锁             │
+│  7. AcquireDistributedLock (Redis) - Distributed lock in cluster│
 │     ↓                                                           │
 │  8. InitEnvironment()                                           │
-│     ├── ExtractPlugin - 解压插件                                 │
+│     ├── ExtractPlugin - Extract plugin                          │
 │     └── InitPythonEnv                                           │
-│         ├── CreateVenv - 创建虚拟环境                            │
-│         ├── InstallDeps (UV) - 安装依赖                          │
-│         └── PreCompile - 预编译                                  │
+│         ├── CreateVenv - Create virtual environment             │
+│         ├── InstallDeps (UV) - Install dependencies             │
+│         └── PreCompile - Pre-compile                            │
 │     ↓                                                           │
-│  9. MountNotifiers() - 挂载生命周期通知器                         │
+│  9. MountNotifiers() - Mount lifecycle notifiers                │
 │     ↓                                                           │
-│  10. Schedule() - 启动调度循环                                   │
+│  10. Schedule() - Start scheduling loop                         │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                         运行阶段                                  │
+│                        Running Phase                              │
 ├─────────────────────────────────────────────────────────────────┤
-│  11. startNewInstance() - 启动子进程                             │
+│  11. startNewInstance() - Start subprocess                      │
 │      ↓                                                          │
-│  12. Wait for Heartbeat (最长 120 秒)                           │
+│  12. Wait for Heartbeat (max 120 seconds)                       │
 │      ↓                                                          │
-│  13. OnInstanceReady() - 实例就绪通知                            │
+│  13. OnInstanceReady() - Instance ready notification            │
 │      ↓                                                          │
-│  14. 进入正常服务状态                                             │
-│      ├── Listen() - 注册会话监听                                 │
-│      ├── Write() - 发送请求到插件                                │
-│      └── Heartbeat Monitor (每 30 秒)                           │
+│  14. Enter normal service state                                 │
+│      ├── Listen() - Register session listener                   │
+│      ├── Write() - Send request to plugin                       │
+│      └── Heartbeat Monitor (every 30 seconds)                   │
 └─────────────────────────────────────────────────────────────────┘
                               ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                         关闭阶段                                  │
+│                       Shutdown Phase                              │
 ├─────────────────────────────────────────────────────────────────┤
 │  15. GracefulStop() / Stop()                                    │
 │      ↓                                                          │
@@ -149,26 +149,26 @@ const (
 │      ├── Close stdin/stdout/stderr                              │
 │      └── Kill subprocess + Reap                                 │
 │      ↓                                                          │
-│  18. OnRuntimeClose() - 运行时关闭通知                           │
+│  18. OnRuntimeClose() - Runtime close notification              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
-### 3.2 关键文件位置
+### 3.2 Key File Locations
 
-| 组件 | 文件路径 |
-|-----|---------|
-| 安装入口 | `internal/service/install_plugin.go` |
-| 安装器 | `internal/core/plugin_manager/installer.go` |
-| 启动器 | `internal/core/control_panel/launcher_local.go` |
-| 运行时构造 | `internal/core/local_runtime/constructor.go` |
-| 环境初始化 | `internal/core/local_runtime/environment.go` |
-| Python 环境 | `internal/core/local_runtime/environment_python.go` |
-| 子进程管理 | `internal/core/local_runtime/subprocess.go` |
-| 实例管理 | `internal/core/local_runtime/instance.go` |
-| 调度控制 | `internal/core/local_runtime/control.go` |
-| 会话管理 | `internal/core/session_manager/session.go` |
+| Component | File Path |
+|-----------|-----------|
+| Install Entry | `internal/service/install_plugin.go` |
+| Installer | `internal/core/plugin_manager/installer.go` |
+| Launcher | `internal/core/control_panel/launcher_local.go` |
+| Runtime Constructor | `internal/core/local_runtime/constructor.go` |
+| Environment Init | `internal/core/local_runtime/environment.go` |
+| Python Environment | `internal/core/local_runtime/environment_python.go` |
+| Subprocess Management | `internal/core/local_runtime/subprocess.go` |
+| Instance Management | `internal/core/local_runtime/instance.go` |
+| Schedule Control | `internal/core/local_runtime/control.go` |
+| Session Management | `internal/core/session_manager/session.go` |
 
-### 3.3 会话 (Session) 结构
+### 3.3 Session Structure
 
 ```go
 type Session struct {
@@ -178,18 +178,18 @@ type Session struct {
     PluginUniqueIdentifier plugin_entities.PluginUniqueIdentifier
     ClusterID              string
 
-    InvokeFrom             access_types.PluginAccessType   // 调用来源类型
-    Action                 access_types.PluginAccessAction // 具体操作
+    InvokeFrom             access_types.PluginAccessType   // Invocation source type
+    Action                 access_types.PluginAccessAction // Specific action
     Declaration            *plugin_entities.PluginDeclaration
 
-    // 上下文信息
+    // Context information
     ConversationID *string
     MessageID      *string
     AppID          *string
     EndpointID     *string
     Context        map[string]any
 
-    // 运行时引用
+    // Runtime reference
     runtime             plugin_entities.PluginRuntimeSessionIOInterface
     backwardsInvocation dify_invocation.BackwardsInvocation
 }
@@ -197,79 +197,79 @@ type Session struct {
 
 ---
 
-## 4. 钩子函数与回调机制
+## 4. Hooks and Callback Mechanisms
 
-本节按运行时类型分类介绍各自的钩子函数和回调机制。
+This section categorizes hooks and callback mechanisms by runtime type.
 
-### 4.1 Local 运行时钩子
+### 4.1 Local Runtime Hooks
 
-Local 运行时通过子进程管理插件，拥有最完整的生命周期钩子体系。
+Local runtime manages plugins through subprocesses and has the most complete lifecycle hook system.
 
-#### 4.1.1 实例级钩子 (PluginInstanceNotifier)
+#### 4.1.1 Instance-Level Hooks (PluginInstanceNotifier)
 
-定义于 `internal/core/local_runtime/signals_instance.go`:
+Defined in `internal/core/local_runtime/signals_instance.go`:
 
 ```go
 type PluginInstanceNotifier interface {
-    OnInstanceStarting()                              // 实例启动中
-    OnInstanceReady(*PluginInstance)                  // 实例就绪
-    OnInstanceLaunchFailed(*PluginInstance, error)    // 启动失败
-    OnInstanceShutdown(*PluginInstance)               // 实例关闭
-    OnInstanceHeartbeat(*PluginInstance)              // 收到心跳
-    OnInstanceLog(*PluginInstance, PluginLogEvent)    // 插件日志
-    OnInstanceErrorLog(*PluginInstance, error)        // 错误日志
-    OnInstanceWarningLog(*PluginInstance, string)     // 警告日志
-    OnInstanceStdout(*PluginInstance, []byte)         // 标准输出
-    OnInstanceStderr(*PluginInstance, []byte)         // 标准错误
+    OnInstanceStarting()                              // Instance starting
+    OnInstanceReady(*PluginInstance)                  // Instance ready
+    OnInstanceLaunchFailed(*PluginInstance, error)    // Launch failed
+    OnInstanceShutdown(*PluginInstance)               // Instance shutdown
+    OnInstanceHeartbeat(*PluginInstance)              // Heartbeat received
+    OnInstanceLog(*PluginInstance, PluginLogEvent)    // Plugin log
+    OnInstanceErrorLog(*PluginInstance, error)        // Error log
+    OnInstanceWarningLog(*PluginInstance, string)     // Warning log
+    OnInstanceStdout(*PluginInstance, []byte)         // Standard output
+    OnInstanceStderr(*PluginInstance, []byte)         // Standard error
 }
 ```
 
-**触发时机**:
+**Trigger Timing**:
 
-| 钩子 | 触发时机 | 用途 |
-|-----|---------|------|
-| `OnInstanceStarting` | 子进程启动前 | 日志记录、状态更新 |
-| `OnInstanceReady` | 收到首次心跳后 | 标记实例可用、释放信号量 |
-| `OnInstanceLaunchFailed` | 启动超时或进程退出 | 错误处理、重试逻辑 |
-| `OnInstanceShutdown` | 实例停止时 | 清理资源、更新状态 |
-| `OnInstanceHeartbeat` | 每次收到心跳 | 更新活跃时间戳 |
-| `OnInstanceLog` | 插件输出日志事件 | 日志收集 |
-| `OnInstanceErrorLog` | 插件输出错误 | 错误监控 |
-| `OnInstanceWarningLog` | 心跳超时警告 | 健康检查 |
-| `OnInstanceStdout` | stdout 有数据 | 数据处理、活跃检测 |
-| `OnInstanceStderr` | stderr 有数据 | 错误收集 |
+| Hook | Trigger Timing | Purpose |
+|------|----------------|---------|
+| `OnInstanceStarting` | Before subprocess starts | Logging, status update |
+| `OnInstanceReady` | After first heartbeat received | Mark instance available, release semaphore |
+| `OnInstanceLaunchFailed` | Launch timeout or process exit | Error handling, retry logic |
+| `OnInstanceShutdown` | When instance stops | Resource cleanup, status update |
+| `OnInstanceHeartbeat` | Each heartbeat received | Update activity timestamp |
+| `OnInstanceLog` | Plugin outputs log event | Log collection |
+| `OnInstanceErrorLog` | Plugin outputs error | Error monitoring |
+| `OnInstanceWarningLog` | Heartbeat timeout warning | Health check |
+| `OnInstanceStdout` | stdout has data | Data processing, activity detection |
+| `OnInstanceStderr` | stderr has data | Error collection |
 
-#### 4.1.2 运行时级钩子 (PluginRuntimeNotifier)
+#### 4.1.2 Runtime-Level Hooks (PluginRuntimeNotifier)
 
-定义于 `internal/core/local_runtime/signals_runtime.go`:
+Defined in `internal/core/local_runtime/signals_runtime.go`:
 
 ```go
 type PluginRuntimeNotifier interface {
-    OnInstanceStarting()                        // 实例启动中
-    OnInstanceReady(*PluginInstance)            // 实例就绪
+    OnInstanceStarting()                        // Instance starting
+    OnInstanceReady(*PluginInstance)            // Instance ready
     OnInstanceLaunchFailed(*PluginInstance, error)
     OnInstanceShutdown(*PluginInstance)
     OnInstanceLog(*PluginInstance, PluginLogEvent)
-    OnInstanceScaleUp(int32)                    // 扩容通知
-    OnInstanceScaleDown(int32)                  // 缩容通知
-    OnInstanceScaleDownFailed(error)            // 缩容失败
-    OnRuntimeStopSchedule()                     // 调度循环停止
-    OnRuntimeClose()                            // 运行时完全关闭
+    OnInstanceScaleUp(int32)                    // Scale up notification
+    OnInstanceScaleDown(int32)                  // Scale down notification
+    OnInstanceScaleDownFailed(error)            // Scale down failed
+    OnRuntimeStopSchedule()                     // Schedule loop stopped
+    OnRuntimeClose()                            // Runtime fully closed
 }
 ```
 
-**扩缩容钩子**:
-- `OnInstanceScaleUp(count)`: 当实例数增加时触发，参数为新的实例总数
-- `OnInstanceScaleDown(count)`: 当实例数减少时触发，参数为新的实例总数
-- `OnInstanceScaleDownFailed(err)`: 缩容失败时触发
+**Scaling Hooks**:
+- `OnInstanceScaleUp(count)`: Triggered when instance count increases, parameter is new total instance count
+- `OnInstanceScaleDown(count)`: Triggered when instance count decreases, parameter is new total instance count
+- `OnInstanceScaleDownFailed(err)`: Triggered when scale down fails
 
-#### 4.1.3 控制面板钩子 (ControlPanelNotifier)
+#### 4.1.3 Control Panel Hooks (ControlPanelNotifier)
 
-定义于 `internal/core/control_panel/signals.go`:
+Defined in `internal/core/control_panel/signals.go`:
 
 ```go
 type ControlPanelNotifier interface {
-    // Local 运行时钩子
+    // Local runtime hooks
     OnLocalRuntimeStarting(identifier PluginUniqueIdentifier)
     OnLocalRuntimeReady(runtime *LocalPluginRuntime)
     OnLocalRuntimeStartFailed(identifier PluginUniqueIdentifier, err error)
@@ -278,13 +278,13 @@ type ControlPanelNotifier interface {
     OnLocalRuntimeScaleUp(runtime *LocalPluginRuntime, newCount int32)
     OnLocalRuntimeScaleDown(runtime *LocalPluginRuntime, newCount int32)
 
-    // Debug 运行时钩子
+    // Debug runtime hooks
     OnDebuggingRuntimeConnected(runtime *RemotePluginRuntime)
     OnDebuggingRuntimeDisconnected(runtime *RemotePluginRuntime)
 }
 ```
 
-#### 4.1.4 Local 生命周期流程图
+#### 4.1.4 Local Lifecycle Flow Diagram
 
 ```
 LaunchLocalPlugin()
@@ -302,15 +302,15 @@ Schedule() → startNewInstance()
     ▼
 Wait for Heartbeat (max 120s)
     │
-    ├─[成功]─► OnInstanceReady() → OnLocalRuntimeReady()
+    ├─[Success]─► OnInstanceReady() → OnLocalRuntimeReady()
     │
-    └─[失败]─► OnInstanceLaunchFailed() → OnLocalRuntimeStartFailed()
+    └─[Failure]─► OnInstanceLaunchFailed() → OnLocalRuntimeStartFailed()
 
-运行中:
+Running:
     │
-    ├─► OnInstanceHeartbeat() (每次心跳)
-    ├─► OnInstanceLog() (日志事件)
-    ├─► OnInstanceStdout/Stderr() (IO 事件)
+    ├─► OnInstanceHeartbeat() (each heartbeat)
+    ├─► OnInstanceLog() (log events)
+    ├─► OnInstanceStdout/Stderr() (IO events)
     │
     ▼
 GracefulStop() / Stop()
@@ -327,47 +327,47 @@ OnRuntimeClose() → OnLocalRuntimeStopped()
 
 ---
 
-### 4.2 Remote/Debug 运行时钩子
+### 4.2 Remote/Debug Runtime Hooks
 
-Remote 运行时通过 TCP 连接管理插件，主要用于开发调试。
+Remote runtime manages plugins through TCP connections, primarily used for development and debugging.
 
-#### 4.2.1 服务器级钩子 (PluginRuntimeNotifier)
+#### 4.2.1 Server-Level Hooks (PluginRuntimeNotifier)
 
-定义于 `internal/core/debugging_runtime/server_signals.go`:
+Defined in `internal/core/debugging_runtime/server_signals.go`:
 
 ```go
 type PluginRuntimeNotifier interface {
-    OnRuntimeConnected(*RemotePluginRuntime) error  // 插件连接成功
-    OnRuntimeDisconnected(*RemotePluginRuntime)     // 插件断开连接
-    OnServerShutdown(reason ServerShutdownReason)   // 服务器关闭
+    OnRuntimeConnected(*RemotePluginRuntime) error  // Plugin connected successfully
+    OnRuntimeDisconnected(*RemotePluginRuntime)     // Plugin disconnected
+    OnServerShutdown(reason ServerShutdownReason)   // Server shutdown
 }
 ```
 
-**服务器关闭原因**:
+**Server Shutdown Reasons**:
 ```go
 type ServerShutdownReason string
 
 const (
-    SERVER_SHUTDOWN_REASON_EXIT  = "exit"   // 正常退出
-    SERVER_SHUTDOWN_REASON_ERROR = "error"  // 错误退出
+    SERVER_SHUTDOWN_REASON_EXIT  = "exit"   // Normal exit
+    SERVER_SHUTDOWN_REASON_ERROR = "error"  // Error exit
 )
 ```
 
-#### 4.2.2 gnet 事件钩子
+#### 4.2.2 gnet Event Hooks
 
-定义于 `internal/core/debugging_runtime/hooks.go`:
+Defined in `internal/core/debugging_runtime/hooks.go`:
 
-| gnet 钩子 | 触发时机 | 内部处理 |
-|----------|---------|---------|
-| `OnBoot` | TCP 服务器启动 | 初始化 |
-| `OnOpen` | 新 TCP 连接建立 | 创建 `RemotePluginRuntime`，设置 10 秒握手超时 |
-| `OnClose` | TCP 连接关闭 | 调用 `cleanupResources()`，触发 `OnRuntimeDisconnected` |
-| `OnTraffic` | 收到数据 | 解码消息，路由到 `onMessage()` |
-| `OnShutdown` | 服务器关闭 | 触发 `OnServerShutdown(SERVER_SHUTDOWN_REASON_EXIT)` |
+| gnet Hook | Trigger Timing | Internal Handling |
+|-----------|----------------|-------------------|
+| `OnBoot` | TCP server starts | Initialization |
+| `OnOpen` | New TCP connection established | Create `RemotePluginRuntime`, set 10s handshake timeout |
+| `OnClose` | TCP connection closed | Call `cleanupResources()`, trigger `OnRuntimeDisconnected` |
+| `OnTraffic` | Data received | Decode message, route to `onMessage()` |
+| `OnShutdown` | Server shutdown | Trigger `OnServerShutdown(SERVER_SHUTDOWN_REASON_EXIT)` |
 
-#### 4.2.3 握手阶段注册事件
+#### 4.2.3 Handshake Phase Registration Events
 
-定义于 `internal/core/debugging_runtime/type.go`:
+Defined in `internal/core/debugging_runtime/type.go`:
 
 ```go
 type RegisterEventType string
@@ -386,15 +386,15 @@ const (
 )
 ```
 
-#### 4.2.4 Remote 生命周期流程图
+#### 4.2.4 Remote Lifecycle Flow Diagram
 
 ```
 TCP Client Connect
     │
     ▼
-OnOpen() → 创建 RemotePluginRuntime
+OnOpen() → Create RemotePluginRuntime
     │
-    ├─► 10 秒握手超时计时器
+    ├─► 10 second handshake timeout timer
     │
     ▼
 OnTraffic() → onMessage()
@@ -410,63 +410,63 @@ OnTraffic() → onMessage()
     │
     └─► REGISTER_EVENT_TYPE_END
             │
-            ├─► 标记 initialized = true
+            ├─► Mark initialized = true
             ├─► OnRuntimeConnected()
-            └─► SpawnCore() 启动消息处理循环
+            └─► SpawnCore() start message processing loop
 
-运行中:
+Running:
     │
-    ├─► OnTraffic() → 解析事件 → 路由到会话回调
+    ├─► OnTraffic() → Parse event → Route to session callback
     │
     ▼
-TCP 断开 / 心跳超时 (60s)
+TCP Disconnect / Heartbeat timeout (60s)
     │
     ▼
 OnClose()
     │
     ├─► cleanupResources()
-    ├─► 关闭所有会话监听器
+    ├─► Close all session listeners
     └─► OnRuntimeDisconnected()
 ```
 
-#### 4.2.5 心跳监控
+#### 4.2.5 Heartbeat Monitoring
 
-定义于 `internal/core/debugging_runtime/lifetime.go`:
+Defined in `internal/core/debugging_runtime/lifetime.go`:
 
 ```go
 func (r *RemotePluginRuntime) HeartbeatMonitor() {
-    // 每 60 秒检查一次
-    // 如果超过 60 秒无活动，关闭连接
+    // Check every 60 seconds
+    // If no activity for more than 60 seconds, close connection
 }
 ```
 
 ---
 
-### 4.3 Serverless 运行时钩子
+### 4.3 Serverless Runtime Hooks
 
-Serverless 运行时是无状态的 HTTP 调用模式，**不实现传统的 Notifier 模式**。
+Serverless runtime is a stateless HTTP call mode and **does not implement the traditional Notifier pattern**.
 
-#### 4.3.1 特点
+#### 4.3.1 Characteristics
 
-- **无持久连接**: 每次调用都是独立的 HTTP 请求
-- **无实例管理**: 不维护长期运行的进程
-- **无扩缩容钩子**: 由云平台自动管理
-- **不支持反向调用**: `SESSION_MESSAGE_TYPE_INVOKE` 被拒绝
+- **No persistent connection**: Each call is an independent HTTP request
+- **No instance management**: Does not maintain long-running processes
+- **No scaling hooks**: Managed automatically by cloud platform
+- **No backwards invocation support**: `SESSION_MESSAGE_TYPE_INVOKE` is rejected
 
-#### 4.3.2 会话事件回调
+#### 4.3.2 Session Event Callbacks
 
-Serverless 使用回调函数而非接口模式处理事件。
+Serverless uses callback functions instead of interface pattern to handle events.
 
-定义于 `internal/core/serverless_runtime/io.go`:
+Defined in `internal/core/serverless_runtime/io.go`:
 
 ```go
-// Listen 创建会话监听器
+// Listen creates a session listener
 func (r *ServerlessPluginRuntime) Listen(sessionId string) (
     *entities.Broadcast[plugin_entities.SessionMessage],
     error,
 )
 
-// Write 发送请求并处理响应
+// Write sends request and handles response
 func (r *ServerlessPluginRuntime) Write(
     sessionId string,
     action access_types.PluginAccessAction,
@@ -474,45 +474,45 @@ func (r *ServerlessPluginRuntime) Write(
 ) error
 ```
 
-**Write 方法内部回调** (行 97-125):
+**Write method internal callbacks** (lines 97-125):
 
 ```go
 plugin_entities.ParsePluginUniversalEvent(
     eventBytes,
     statusText,
-    // 1. 会话消息回调
+    // 1. Session message callback
     func(sessionId string, data []byte) {
-        // 解析并发送到监听器
+        // Parse and send to listener
         l.Send(sessionMessage)
     },
-    // 2. 心跳回调 (空实现)
+    // 2. Heartbeat callback (empty implementation)
     func() {},
-    // 3. 错误回调
+    // 3. Error callback
     func(err string) {
         l.Send(plugin_entities.SessionMessage{
             Type: plugin_entities.SESSION_MESSAGE_TYPE_ERROR,
             Data: []byte(err),
         })
     },
-    // 4. 日志回调 (空实现)
+    // 4. Log callback (empty implementation)
     func(logEvent plugin_entities.PluginLogEvent) {},
 )
 ```
 
-#### 4.3.3 Serverless 事务处理器
+#### 4.3.3 Serverless Transaction Handler
 
-定义于 `internal/core/io_tunnel/backwards_invocation/transaction/serverless_handler.go`:
+Defined in `internal/core/io_tunnel/backwards_invocation/transaction/serverless_handler.go`:
 
 ```go
 type ServerlessTransactionHandler struct {
     maxTimeout time.Duration
 }
 
-// Handle 处理 Serverless 请求
+// Handle processes Serverless request
 func (h *ServerlessTransactionHandler) Handle(ctx *gin.Context, sessionId string)
 ```
 
-**事务写入器** (定义于 `serverless_writer.go`):
+**Transaction Writer** (defined in `serverless_writer.go`):
 
 ```go
 type ServerlessTransactionWriter struct {
@@ -520,17 +520,17 @@ type ServerlessTransactionWriter struct {
     writeFlushCloser WriteFlushCloser
 }
 
-// Write 写入事件并 flush
+// Write writes event and flushes
 func (w *ServerlessTransactionWriter) Write(
     event session_manager.PLUGIN_IN_STREAM_EVENT,
     data any,
 ) error
 
-// Done 关闭写入器
+// Done closes the writer
 func (w *ServerlessTransactionWriter) Done()
 ```
 
-#### 4.3.4 Serverless 生命周期流程图
+#### 4.3.4 Serverless Lifecycle Flow Diagram
 
 ```
 HTTP POST /invoke?action=xxx
@@ -538,52 +538,52 @@ HTTP POST /invoke?action=xxx
     ▼
 ServerlessPluginRuntime.Listen(sessionId)
     │
-    └─► 创建 Broadcast[SessionMessage]
+    └─► Create Broadcast[SessionMessage]
 
 ServerlessPluginRuntime.Write(sessionId, action, data)
     │
-    ├─► 异步提交请求任务
+    ├─► Async submit request task
     │       │
     │       ▼
     │   HTTP POST → Lambda Function
     │       │
     │       ▼
-    │   bufio.Scanner 读取 SSE 响应
+    │   bufio.Scanner reads SSE response
     │       │
     │       ├─► ParsePluginUniversalEvent()
     │       │       │
     │       │       ├─► sessionHandler → l.Send(message)
     │       │       ├─► errorHandler → l.Send(error)
-    │       │       └─► heartbeat/log (忽略)
+    │       │       └─► heartbeat/log (ignored)
     │       │
-    │       └─► 响应结束
+    │       └─► Response ends
     │               │
     │               ├─► l.Send(SESSION_MESSAGE_TYPE_END)
     │               ├─► l.Close()
     │               └─► listeners.Delete(sessionId)
     │
-    └─► 返回 nil (异步处理)
+    └─► Return nil (async processing)
 
-监听器读取:
+Listener reads:
     │
     ▼
 Broadcast.Listen(callback)
     │
-    └─► callback(SessionMessage) 被调用
+    └─► callback(SessionMessage) is called
 ```
 
-#### 4.3.5 Serverless 限制
+#### 4.3.5 Serverless Limitations
 
-| 功能 | 支持情况 | 说明 |
-|-----|---------|------|
-| 工具调用 | ✅ | 通过 HTTP 请求 |
-| 模型调用 | ✅ | 通过 HTTP 请求 |
-| 反向调用 | ❌ | 明确拒绝，返回 `serverless_event_not_supported` |
-| 心跳监控 | ❌ | 无状态，无需心跳 |
-| 实例扩缩容 | ❌ | 由云平台管理 |
-| 日志收集 | ❌ | 日志回调为空实现 |
+| Feature | Support | Description |
+|---------|---------|-------------|
+| Tool invocation | ✅ | Via HTTP request |
+| Model invocation | ✅ | Via HTTP request |
+| Backwards invocation | ❌ | Explicitly rejected, returns `serverless_event_not_supported` |
+| Heartbeat monitoring | ❌ | Stateless, no heartbeat needed |
+| Instance scaling | ❌ | Managed by cloud platform |
+| Log collection | ❌ | Log callback is empty implementation |
 
-**反向调用拒绝逻辑** (定义于 `internal/core/io_tunnel/generic.go`):
+**Backwards invocation rejection logic** (defined in `internal/core/io_tunnel/generic.go`):
 
 ```go
 case plugin_entities.SESSION_MESSAGE_TYPE_INVOKE:
@@ -594,90 +594,90 @@ case plugin_entities.SESSION_MESSAGE_TYPE_INVOKE:
         })
         return
     }
-    // ... 处理反向调用
+    // ... handle backwards invocation
 ```
 
 ---
 
-### 4.4 三种运行时钩子对比
+### 4.4 Runtime Hooks Comparison
 
-| 钩子类别 | Local | Remote/Debug | Serverless |
-|---------|-------|--------------|------------|
-| **实例启动** | `OnInstanceStarting` | `OnOpen` | N/A |
-| **实例就绪** | `OnInstanceReady` | `OnRuntimeConnected` | N/A |
-| **实例失败** | `OnInstanceLaunchFailed` | 握手超时关闭 | HTTP 错误 |
-| **实例关闭** | `OnInstanceShutdown` | `OnClose` | 请求结束 |
-| **心跳监控** | `OnInstanceHeartbeat` | `HeartbeatMonitor` | N/A |
-| **日志事件** | `OnInstanceLog` | 事件解析 | 忽略 |
-| **错误事件** | `OnInstanceErrorLog` | 事件解析 | 回调处理 |
-| **扩缩容** | `OnInstanceScaleUp/Down` | N/A | 云平台管理 |
-| **运行时关闭** | `OnRuntimeClose` | `OnServerShutdown` | N/A |
-| **反向调用** | ✅ 支持 | ✅ 支持 | ❌ 不支持 |
+| Hook Category | Local | Remote/Debug | Serverless |
+|---------------|-------|--------------|------------|
+| **Instance Starting** | `OnInstanceStarting` | `OnOpen` | N/A |
+| **Instance Ready** | `OnInstanceReady` | `OnRuntimeConnected` | N/A |
+| **Instance Failed** | `OnInstanceLaunchFailed` | Handshake timeout closes | HTTP error |
+| **Instance Shutdown** | `OnInstanceShutdown` | `OnClose` | Request ends |
+| **Heartbeat Monitoring** | `OnInstanceHeartbeat` | `HeartbeatMonitor` | N/A |
+| **Log Events** | `OnInstanceLog` | Event parsing | Ignored |
+| **Error Events** | `OnInstanceErrorLog` | Event parsing | Callback handling |
+| **Scaling** | `OnInstanceScaleUp/Down` | N/A | Cloud platform managed |
+| **Runtime Close** | `OnRuntimeClose` | `OnServerShutdown` | N/A |
+| **Backwards Invocation** | ✅ Supported | ✅ Supported | ❌ Not supported |
 
 ---
 
-### 4.5 反向调用 (Backwards Invocation)
+### 4.5 Backwards Invocation
 
-插件可以通过反向调用机制访问 Dify API 服务。
+Plugins can access Dify API services through the backwards invocation mechanism.
 
-**注意**: Serverless 运行时不支持反向调用，仅 Local 和 Remote/Debug 运行时支持。
+**Note**: Serverless runtime does not support backwards invocation; only Local and Remote/Debug runtimes support it.
 
-#### 4.5.1 支持的调用类型
+#### 4.5.1 Supported Invocation Types
 
-定义于 `internal/core/dify_invocation/types.go`:
+Defined in `internal/core/dify_invocation/types.go`:
 
-| 调用类型 | 说明 | 所需权限 |
-|---------|------|---------|
-| `llm` | LLM 模型调用 | `AllowInvokeLLM()` |
-| `llm_structured_output` | 结构化输出 | `AllowInvokeLLM()` |
-| `text_embedding` | 文本向量化 | `AllowInvokeTextEmbedding()` |
-| `multimodal_embedding` | 多模态向量化 | `AllowInvokeTextEmbedding()` |
-| `rerank` | 重排序 | `AllowInvokeRerank()` |
-| `multimodal_rerank` | 多模态重排序 | `AllowInvokeRerank()` |
-| `tts` | 文本转语音 | `AllowInvokeTTS()` |
-| `speech2text` | 语音转文本 | `AllowInvokeSpeech2Text()` |
-| `moderation` | 内容审核 | `AllowInvokeModeration()` |
-| `tool` | 工具调用 | `AllowInvokeTool()` |
-| `app` | 应用调用 | `AllowInvokeApp()` |
-| `node_parameter_extractor` | 参数提取 | `AllowInvokeNode()` |
-| `node_question_classifier` | 问题分类 | `AllowInvokeNode()` |
-| `storage` | 存储操作 | `AllowInvokeStorage()` |
-| `upload_file` | 文件上传 | 始终允许 |
-| `fetch_app` | 获取应用信息 | `AllowInvokeApp()` |
+| Invocation Type | Description | Required Permission |
+|-----------------|-------------|---------------------|
+| `llm` | LLM model invocation | `AllowInvokeLLM()` |
+| `llm_structured_output` | Structured output | `AllowInvokeLLM()` |
+| `text_embedding` | Text embedding | `AllowInvokeTextEmbedding()` |
+| `multimodal_embedding` | Multimodal embedding | `AllowInvokeTextEmbedding()` |
+| `rerank` | Reranking | `AllowInvokeRerank()` |
+| `multimodal_rerank` | Multimodal reranking | `AllowInvokeRerank()` |
+| `tts` | Text-to-speech | `AllowInvokeTTS()` |
+| `speech2text` | Speech-to-text | `AllowInvokeSpeech2Text()` |
+| `moderation` | Content moderation | `AllowInvokeModeration()` |
+| `tool` | Tool invocation | `AllowInvokeTool()` |
+| `app` | App invocation | `AllowInvokeApp()` |
+| `node_parameter_extractor` | Parameter extraction | `AllowInvokeNode()` |
+| `node_question_classifier` | Question classification | `AllowInvokeNode()` |
+| `storage` | Storage operations | `AllowInvokeStorage()` |
+| `upload_file` | File upload | Always allowed |
+| `fetch_app` | Fetch app info | `AllowInvokeApp()` |
 
-#### 4.5.2 反向调用流程
+#### 4.5.2 Backwards Invocation Flow
 
 ```
 Plugin Process
     │
-    ▼ (发送 SESSION_MESSAGE_TYPE_INVOKE)
+    ▼ (Send SESSION_MESSAGE_TYPE_INVOKE)
 Plugin Runtime
     │
     ▼
 Session Manager
     │
-    ▼ (路由到) BackwardsInvocation.InvokeDify()
+    ▼ (Route to) BackwardsInvocation.InvokeDify()
     │
-    ├─► Permission Check (检查 manifest 权限)
+    ├─► Permission Check (check manifest permissions)
     │       │
-    │       └─► 拒绝? WriteError() → 返回插件
+    │       └─► Denied? WriteError() → Return to plugin
     │
-    ├─► Async Task Dispatch (异步分发)
+    ├─► Async Task Dispatch
     │       │
     │       ▼
-    │   具体执行器 (如 executeDifyInvocationLLMTask)
+    │   Specific executor (e.g., executeDifyInvocationLLMTask)
     │       │
     │       ▼
     │   HTTP Client → Dify API Server
     │       │
-    │       ▼ (流式/结构化响应)
+    │       ▼ (Streaming/Structured response)
     │   handle.WriteResponse()
     │       │
     │       ▼
-    │   Transaction Writer → 返回插件
+    │   Transaction Writer → Return to plugin
 ```
 
-#### 4.5.3 BackwardsInvocation 接口
+#### 4.5.3 BackwardsInvocation Interface
 
 ```go
 type BackwardsInvocation interface {
@@ -701,37 +701,37 @@ type BackwardsInvocation interface {
 }
 ```
 
-### 4.6 插件事件类型
+### 4.6 Plugin Event Types
 
-定义于 `pkg/entities/plugin_entities/event.go`:
+Defined in `pkg/entities/plugin_entities/event.go`:
 
 ```go
-// 插件输出事件
+// Plugin output events
 const (
-    PLUGIN_EVENT_LOG       = "log"       // 日志事件
-    PLUGIN_EVENT_SESSION   = "session"   // 会话消息
-    PLUGIN_EVENT_ERROR     = "error"     // 错误事件
-    PLUGIN_EVENT_HEARTBEAT = "heartbeat" // 心跳事件
+    PLUGIN_EVENT_LOG       = "log"       // Log event
+    PLUGIN_EVENT_SESSION   = "session"   // Session message
+    PLUGIN_EVENT_ERROR     = "error"     // Error event
+    PLUGIN_EVENT_HEARTBEAT = "heartbeat" // Heartbeat event
 )
 
-// 会话消息类型
+// Session message types
 const (
-    SESSION_MESSAGE_TYPE_STREAM = "stream" // 流式响应
-    SESSION_MESSAGE_TYPE_END    = "end"    // 结束标记
-    SESSION_MESSAGE_TYPE_ERROR  = "error"  // 错误消息
-    SESSION_MESSAGE_TYPE_INVOKE = "invoke" // 反向调用
+    SESSION_MESSAGE_TYPE_STREAM = "stream" // Streaming response
+    SESSION_MESSAGE_TYPE_END    = "end"    // End marker
+    SESSION_MESSAGE_TYPE_ERROR  = "error"  // Error message
+    SESSION_MESSAGE_TYPE_INVOKE = "invoke" // Backwards invocation
 )
 ```
 
 ---
 
-## 5. 变量约定与配置
+## 5. Variables and Configuration
 
-### 5.1 环境变量
+### 5.1 Environment Variables
 
-完整配置参考 `.env.example`，主要分类：
+For complete configuration reference, see `.env.example`. Main categories:
 
-#### 服务器配置
+#### Server Configuration
 ```bash
 SERVER_HOST=0.0.0.0
 SERVER_PORT=5002
@@ -739,7 +739,7 @@ SERVER_KEY=<security-key>
 GIN_MODE=release
 ```
 
-#### Dify 内部 API
+#### Dify Internal API
 ```bash
 DIFY_INNER_API_KEY="<api-key>"
 DIFY_INNER_API_URL=http://127.0.0.1:5001
@@ -748,14 +748,14 @@ DIFY_BACKWARDS_INVOCATION_WRITE_TIMEOUT=5000
 DIFY_BACKWARDS_INVOCATION_READ_TIMEOUT=240000
 ```
 
-#### 插件远程安装
+#### Plugin Remote Installation
 ```bash
 PLUGIN_REMOTE_INSTALLING_ENABLED=true
 PLUGIN_REMOTE_INSTALLING_HOST=127.0.0.1
 PLUGIN_REMOTE_INSTALLING_PORT=5003
 ```
 
-#### 存储配置
+#### Storage Configuration
 ```bash
 PLUGIN_STORAGE_TYPE=local           # local / s3 / tencent-cos / aliyun-oss / azure / gcs / huawei-obs / volcengine-tos
 PLUGIN_STORAGE_LOCAL_ROOT=./storage
@@ -763,7 +763,7 @@ PLUGIN_INSTALLED_PATH=plugin
 PLUGIN_WORKING_PATH=cwd
 ```
 
-#### Redis 配置
+#### Redis Configuration
 ```bash
 REDIS_HOST=127.0.0.1
 REDIS_PORT=6379
@@ -772,7 +772,7 @@ REDIS_DB=0
 REDIS_USE_SSL=false
 ```
 
-#### 数据库配置
+#### Database Configuration
 ```bash
 DB_TYPE=postgresql
 DB_USERNAME=postgres
@@ -782,7 +782,7 @@ DB_PORT=5432
 DB_DATABASE=dify_plugin
 ```
 
-#### 插件运行时
+#### Plugin Runtime
 ```bash
 PYTHON_INTERPRETER_PATH=/usr/bin/python3
 UV_PATH=
@@ -791,751 +791,60 @@ PLUGIN_RUNTIME_BUFFER_SIZE=1024
 PLUGIN_RUNTIME_MAX_BUFFER_SIZE=5242880
 ```
 
-#### 安全配置
+#### Security Configuration
 ```bash
 FORCE_VERIFYING_SIGNATURE=true
 ENFORCE_LANGGENIUS_PLUGIN_SIGNATURES=true
 MAX_PLUGIN_PACKAGE_SIZE=52428800
 ```
 
-### 5.2 插件唯一标识符格式
+### 5.2 Plugin Unique Identifier Format
 
 ```
-格式: author/plugin_id:version@checksum
+Format: author/plugin_id:version@checksum
 
-示例:
+Examples:
 - langgenius/my_tool:1.0.0@abc123def456...
 - partner-name/api_plugin:2.1.3-beta@xyz789...
 
-规则:
-- Author: 1-64 字符, 字母数字/下划线/连字符
-- Plugin ID: 1-255 字符, 字母数字/下划线/连字符
-- Version: 语义化版本 (如 1.0.0, 2.1.3-beta)
-- Checksum: 32-64 位十六进制字符串 (SHA256)
+Rules:
+- Author: 1-64 characters, alphanumeric/underscore/hyphen
+- Plugin ID: 1-255 characters, alphanumeric/underscore/hyphen
+- Version: Semantic versioning (e.g., 1.0.0, 2.1.3-beta)
+- Checksum: 32-64 hexadecimal characters (SHA256)
 ```
 
-### 5.3 HTTP 请求头常量
+### 5.3 HTTP Request Header Constants
 
 ```go
 const (
-    X_PLUGIN_ID     = "X-Plugin-ID"      // 插件 ID
-    X_API_KEY       = "X-Api-Key"        // API 密钥
-    X_ADMIN_API_KEY = "X-Admin-Api-Key"  // 管理员 API 密钥
+    X_PLUGIN_ID     = "X-Plugin-ID"      // Plugin ID
+    X_API_KEY       = "X-Api-Key"        // API key
+    X_ADMIN_API_KEY = "X-Admin-Api-Key"  // Admin API key
 )
 ```
 
 ---
 
-## 6. 各类型插件详解
+## 6. Plugin Type Reference
 
-### 6.1 Tool 插件
+For development guides, directory structures, YAML configuration, and Python implementation for each plugin type, refer to the corresponding documentation:
 
-**用途**: 提供可复用的工具函数，可被 Agent 或工作流调用。
+| Plugin Type | Purpose | Development Guide | Declaration Definition |
+|-------------|---------|-------------------|------------------------|
+| Tool | Tool functions for Agent/workflow invocation | [tool-plugin.md](tool-plugin.md) | `tool_declaration.go` |
+| Model | AI model providers (LLM, Embedding, etc.) | [model-plugin.md](model-plugin.md) | `model_declaration.go` |
+| Agent Strategy | Agent reasoning strategies | [agent-strategy-plugin.md](agent-strategy-plugin.md) | `agent_declaration.go` |
+| Datasource | Data source connections (cloud drive, documents, etc.) | [datasource-plugin.md](datasource-plugin.md) | `datasource_declaration.go` |
+| Trigger | Webhook event triggers | [trigger-plugin.md](trigger-plugin.md) | `trigger_declaration.go` |
+| Extension | HTTP endpoint extensions | [extension-plugin.md](extension-plugin.md) | `endpoint_declaration.go` |
 
-**声明文件位置**: `pkg/entities/plugin_entities/tool_declaration.go`
+Declaration definition files are located in the `pkg/entities/plugin_entities/` directory.
 
-#### 6.1.1 声明结构
+### 6.1 Directory Structure Comparison
 
-```go
-type ToolProviderDeclaration struct {
-    Identity          ToolProviderIdentity   // 提供者身份
-    CredentialsSchema []ProviderConfig       // 凭证配置 (可选)
-    OAuthSchema       *OAuthSchema           // OAuth 配置 (可选)
-    Tools             []ToolDeclaration      // 工具列表 (必需)
-}
-
-type ToolDeclaration struct {
-    Identity             ToolIdentity          // 工具身份
-    Description          ToolDescription       // 描述 (必需)
-    Parameters           []ToolParameter       // 参数列表
-    OutputSchema         map[string]any        // 输出结构
-    HasRuntimeParameters bool                  // 是否有运行时参数
-}
-```
-
-#### 6.1.2 参数类型
-
-```go
-const (
-    TOOL_PARAMETER_TYPE_STRING         = "string"
-    TOOL_PARAMETER_TYPE_NUMBER         = "number"
-    TOOL_PARAMETER_TYPE_BOOLEAN        = "boolean"
-    TOOL_PARAMETER_TYPE_SELECT         = "select"
-    TOOL_PARAMETER_TYPE_SECRET_INPUT   = "secret-input"
-    TOOL_PARAMETER_TYPE_FILE           = "file"
-    TOOL_PARAMETER_TYPE_FILES          = "files"
-    TOOL_PARAMETER_TYPE_APP_SELECTOR   = "app-selector"
-    TOOL_PARAMETER_TYPE_MODEL_SELECTOR = "model-selector"
-    TOOL_PARAMETER_TYPE_ANY            = "any"
-    TOOL_PARAMETER_TYPE_DYNAMIC_SELECT = "dynamic-select"
-    TOOL_PARAMETER_ARRAY               = "array"
-    TOOL_PARAMETER_OBJECT              = "object"
-    TOOL_PARAMETER_TYPE_CHECKBOX       = "checkbox"
-)
-```
-
-#### 6.1.3 参数表单类型
-
-```go
-const (
-    TOOL_PARAMETER_FORM_SCHEMA = "schema" // Schema 定义
-    TOOL_PARAMETER_FORM_FORM   = "form"   // 表单输入
-    TOOL_PARAMETER_FORM_LLM    = "llm"    // LLM 填充
-)
-```
-
-#### 6.1.4 请求/响应
-
-```go
-// 调用请求
-type RequestInvokeTool struct {
-    Provider       string         `json:"provider"`
-    Tool           string         `json:"tool"`
-    ToolParameters map[string]any `json:"tool_parameters"`
-    Credentials    map[string]any `json:"credentials"`
-}
-
-// 凭证验证请求
-type RequestValidateToolCredentials struct {
-    Provider    string         `json:"provider"`
-    Credentials map[string]any `json:"credentials"`
-}
-```
-
-#### 6.1.5 工具返回值约定
-
-工具插件返回值使用流式响应，定义于 `pkg/entities/tool_entities/tool.go`:
-
-**核心响应结构**:
-
-```go
-type ToolResponseChunk struct {
-    Type    ToolResponseChunkType `json:"type"`    // 响应类型
-    Message map[string]any        `json:"message"` // 消息内容
-    Meta    map[string]any        `json:"meta"`    // 元数据
-}
-```
-
-**支持的返回类型**:
-
-| 类型常量 | 值 | 说明 |
-|---------|-----|------|
-| `ToolResponseChunkTypeText` | `text` | 文本内容 |
-| `ToolResponseChunkTypeJson` | `json` | JSON 数据 |
-| `ToolResponseChunkTypeFile` | `file` | 文件 |
-| `ToolResponseChunkTypeBlob` | `blob` | 二进制数据 |
-| `ToolResponseChunkTypeBlobChunk` | `blob_chunk` | 流式二进制块 (用于大文件传输) |
-| `ToolResponseChunkTypeLink` | `link` | 链接 |
-| `ToolResponseChunkTypeImage` | `image` | 图片 |
-| `ToolResponseChunkTypeImageLink` | `image_link` | 图片链接 |
-| `ToolResponseChunkTypeVariable` | `variable` | 变量 |
-| `ToolResponseChunkTypeLog` | `log` | 日志 |
-| `ToolResponseChunkTypeRetrieverResources` | `retriever_resources` | 检索资源 |
-
-**输出 Schema 定义** (可选):
-
-工具可以在声明中定义输出 JSON Schema:
-
-```go
-type ToolDeclaration struct {
-    // ...
-    OutputSchema ToolOutputSchema `json:"output_schema,omitempty" yaml:"output_schema,omitempty"`
-}
-```
-
-YAML 示例:
-```yaml
-output_schema:
-  type: object
-  properties:
-    result:
-      type: string
-    count:
-      type: number
-```
-
-**Blob 传输限制**:
-
-对于大文件传输，使用 `blob_chunk` 类型进行流式传输:
-
-| 限制项 | 值 |
-|-------|-----|
-| 单个块最大 | 8 KB |
-| 单个文件最大 | 15 MB |
-
-`blob_chunk` 消息字段:
-- `id`: 唯一标识符
-- `blob`: Base64 编码的数据块
-- `total_length`: 文件总长度
-- `end`: 是否为最后一块 (boolean)
-
-#### 6.1.6 访问操作
-
-| 操作 | 说明 |
-|-----|------|
-| `invoke_tool` | 调用工具 |
-| `validate_tool_credentials` | 验证凭证 |
-| `get_tool_runtime_parameters` | 获取运行时参数 |
-
----
-
-### 6.2 Model 插件
-
-**用途**: 提供 AI 模型能力，包括 LLM、Embedding、TTS 等。
-
-**声明文件位置**: `pkg/entities/plugin_entities/model_declaration.go`
-
-#### 6.2.1 声明结构
-
-```go
-type ModelProviderDeclaration struct {
-    Provider                 string                          // 提供者名称 (必需)
-    Label                    I18nObject                      // 标签
-    Description              I18nObject                      // 描述
-    SupportedModelTypes      []ModelType                     // 支持的模型类型
-    ConfigurateMethods       []ModelProviderConfigurateMethod // 配置方法
-    ProviderCredentialSchema *CredentialSchema               // 提供者凭证
-    ModelCredentialSchema    *CredentialSchema               // 模型凭证
-    Models                   []ModelDeclaration              // 模型列表
-}
-
-type ModelDeclaration struct {
-    Model           string                 // 模型标识 (必需)
-    Label           I18nObject             // 标签
-    ModelType       ModelType              // 模型类型 (必需)
-    Features        []string               // 特性列表
-    FetchFrom       string                 // 配置方法
-    ModelProperties map[string]any         // 模型属性
-    Deprecated      bool                   // 是否废弃
-    ParameterRules  []ModelParameterRule   // 参数规则
-    PriceConfig     *PriceConfig           // 定价配置
-}
-```
-
-#### 6.2.2 模型类型
-
-```go
-const (
-    MODEL_TYPE_LLM                  = "llm"                  // 语言模型
-    MODEL_TYPE_TEXT_EMBEDDING       = "text-embedding"       // 文本向量化
-    MODEL_TYPE_RERANKING            = "rerank"               // 重排序
-    MODEL_TYPE_SPEECH2TEXT          = "speech2text"          // 语音转文本
-    MODEL_TYPE_MODERATION           = "moderation"           // 内容审核
-    MODEL_TYPE_TTS                  = "tts"                  // 文本转语音
-    MODEL_TYPE_TEXT2IMG             = "text2img"             // 文本生成图片
-    MODEL_TYPE_MULTIMODAL_EMBEDDING = "multimodal-embedding" // 多模态向量化
-    MODEL_TYPE_MULTIMODAL_RERANK    = "multimodal-rerank"    // 多模态重排序
-)
-```
-
-#### 6.2.3 配置方法
-
-```go
-const (
-    CONFIGURATE_METHOD_PREDEFINED_MODEL   = "predefined-model"   // 预定义模型
-    CONFIGURATE_METHOD_CUSTOMIZABLE_MODEL = "customizable-model" // 可自定义模型
-)
-```
-
-#### 6.2.4 参数类型
-
-```go
-const (
-    PARAMETER_TYPE_FLOAT   = "float"
-    PARAMETER_TYPE_INT     = "int"
-    PARAMETER_TYPE_STRING  = "string"
-    PARAMETER_TYPE_BOOLEAN = "boolean"
-    PARAMETER_TYPE_TEXT    = "text"
-)
-```
-
-#### 6.2.5 请求示例
-
-```go
-// LLM 调用
-type RequestInvokeLLM struct {
-    Provider        string              `json:"provider"`
-    Model           string              `json:"model"`
-    ModelParameters map[string]any      `json:"model_parameters"`
-    PromptMessages  []PromptMessage     `json:"prompt_messages"`
-    Tools           []PromptMessageTool `json:"tools"`
-    Stop            []string            `json:"stop"`
-    Stream          bool                `json:"stream"`
-    Credentials     map[string]any      `json:"credentials"`
-}
-
-// Text Embedding
-type RequestInvokeTextEmbedding struct {
-    Provider    string         `json:"provider"`
-    Model       string         `json:"model"`
-    Credentials map[string]any `json:"credentials"`
-    Texts       []string       `json:"texts"`
-    InputType   string         `json:"input_type"`
-}
-```
-
----
-
-### 6.3 Agent Strategy 插件
-
-**用途**: 提供 Agent 推理策略，控制 Agent 的行为逻辑。
-
-**声明文件位置**: `pkg/entities/plugin_entities/agent_declaration.go`
-
-#### 6.3.1 声明结构
-
-```go
-type AgentStrategyProviderDeclaration struct {
-    Identity   AgentStrategyProviderIdentity   // 提供者身份
-    Strategies []AgentStrategyDeclaration      // 策略列表 (必需)
-}
-
-type AgentStrategyDeclaration struct {
-    Identity     AgentStrategyIdentity      // 策略身份
-    Description  I18nObject                 // 描述 (必需)
-    Parameters   []AgentStrategyParameter   // 参数列表
-    OutputSchema map[string]any             // 输出结构
-    Features     []string                   // 特性列表
-}
-```
-
-#### 6.3.2 参数类型
-
-```go
-const (
-    AGENT_STRATEGY_PARAMETER_TYPE_STRING         = "string"
-    AGENT_STRATEGY_PARAMETER_TYPE_NUMBER         = "number"
-    AGENT_STRATEGY_PARAMETER_TYPE_BOOLEAN        = "boolean"
-    AGENT_STRATEGY_PARAMETER_TYPE_SELECT         = "select"
-    AGENT_STRATEGY_PARAMETER_TYPE_SECRET_INPUT   = "secret-input"
-    AGENT_STRATEGY_PARAMETER_TYPE_FILE           = "file"
-    AGENT_STRATEGY_PARAMETER_TYPE_FILES          = "files"
-    AGENT_STRATEGY_PARAMETER_TYPE_APP_SELECTOR   = "app-selector"
-    AGENT_STRATEGY_PARAMETER_TYPE_MODEL_SELECTOR = "model-selector"
-    AGENT_STRATEGY_PARAMETER_TYPE_TOOLS_SELECTOR = "array[tools]"  // Agent 特有
-    AGENT_STRATEGY_PARAMETER_TYPE_ANY            = "any"
-)
-```
-
-**特别说明**: Agent Strategy 支持 `TOOLS_SELECTOR` 类型，允许选择可用工具。
-
-#### 6.3.3 请求示例
-
-```go
-type RequestInvokeAgentStrategy struct {
-    AgentStrategyProvider string         `json:"agent_strategy_provider"`
-    AgentStrategy         string         `json:"agent_strategy"`
-    AgentStrategyParams   map[string]any `json:"agent_strategy_params"`
-}
-```
-
----
-
-### 6.4 Datasource 插件
-
-**用途**: 提供数据源连接能力，支持网站爬取、在线文档、云盘等。
-
-**声明文件位置**: `pkg/entities/plugin_entities/datasource_declaration.go`
-
-#### 6.4.1 声明结构
-
-```go
-type DatasourceProviderDeclaration struct {
-    Identity          DatasourceProviderIdentity // 提供者身份
-    CredentialsSchema []ProviderConfig           // 凭证配置 (可选)
-    OAuthSchema       *OAuthSchema               // OAuth 配置 (可选)
-    ProviderType      DatasourceType             // 数据源类型 (必需)
-    Datasources       []DatasourceDeclaration    // 数据源列表
-}
-
-type DatasourceDeclaration struct {
-    Identity     DatasourceIdentity     // 数据源身份
-    Parameters   []DatasourceParameter  // 参数列表 (必需, min=1)
-    Description  I18nObject             // 描述 (必需)
-    OutputSchema map[string]any         // 输出结构
-}
-```
-
-#### 6.4.2 数据源类型
-
-```go
-const (
-    DatasourceTypeWebsiteCrawl   = "website_crawl"   // 网站爬取
-    DatasourceTypeOnlineDocument = "online_document" // 在线文档
-    DatasourceTypeOnlineDrive    = "online_drive"    // 云盘
-)
-```
-
-#### 6.4.3 参数类型
-
-```go
-const (
-    DATASOURCE_PARAMETER_TYPE_STRING       = "string"
-    DATASOURCE_PARAMETER_TYPE_NUMBER       = "number"
-    DATASOURCE_PARAMETER_TYPE_BOOLEAN      = "boolean"
-    DATASOURCE_PARAMETER_TYPE_SELECT       = "select"
-    DATASOURCE_PARAMETER_TYPE_SECRET_INPUT = "secret-input"
-)
-```
-
-#### 6.4.4 请求示例
-
-```go
-// 调用数据源
-type RequestInvokeDatasourceRequest struct {
-    Provider             string         `json:"provider"`
-    Datasource           string         `json:"datasource"`
-    Credentials          map[string]any `json:"credentials"`
-    DatasourceParameters map[string]any `json:"datasource_parameters"`
-}
-
-// 浏览云盘文件
-type DatasourceOnlineDriveBrowseFilesRequest struct {
-    Bucket             *string                `json:"bucket"`
-    Prefix             string                 `json:"prefix"`
-    MaxKeys            int                    `json:"max_keys"`
-    NextPageParameters map[string]interface{} `json:"next_page_parameters"`
-}
-```
-
----
-
-### 6.5 Trigger 插件
-
-**用途**: 提供事件触发能力，支持 Webhook 订阅和事件派发。
-
-**声明文件位置**: `pkg/entities/plugin_entities/trigger_declaration.go`
-
-#### 6.5.1 声明结构
-
-```go
-type TriggerProviderDeclaration struct {
-    Identity                TriggerProviderIdentity // 提供者身份
-    SubscriptionSchema      []ProviderConfig        // 订阅参数 (必需)
-    SubscriptionConstructor *SubscriptionConstructor // 订阅构造器 (可选)
-    Events                  []EventDeclaration       // 事件列表
-}
-
-type EventDeclaration struct {
-    Identity     EventIdentity     // 事件身份
-    Parameters   []EventParameter  // 参数列表
-    Description  I18nObject        // 描述 (必需)
-    OutputSchema map[string]any    // 输出结构
-}
-
-type TriggerRuntime struct {
-    Credentials map[string]any `json:"credentials"`
-    SessionID   *string        `json:"session_id"`
-}
-```
-
-#### 6.5.2 事件参数类型
-
-```go
-const (
-    EVENT_PARAMETER_TYPE_STRING         = "string"
-    EVENT_PARAMETER_TYPE_NUMBER         = "number"
-    EVENT_PARAMETER_TYPE_BOOLEAN        = "boolean"
-    EVENT_PARAMETER_TYPE_SELECT         = "select"
-    EVENT_PARAMETER_TYPE_FILE           = "file"
-    EVENT_PARAMETER_TYPE_FILES          = "files"
-    EVENT_PARAMETER_TYPE_MODEL_SELECTOR = "model-selector"
-    EVENT_PARAMETER_TYPE_APP_SELECTOR   = "app-selector"
-    EVENT_PARAMETER_TYPE_OBJECT         = "object"
-    EVENT_PARAMETER_TYPE_ARRAY          = "array"
-    EVENT_PARAMETER_TYPE_DYNAMIC_SELECT = "dynamic-select"
-    EVENT_PARAMETER_TYPE_CHECKBOX       = "checkbox"
-)
-```
-
-#### 6.5.3 请求示例
-
-```go
-// 订阅触发器
-type TriggerSubscribeRequest struct {
-    Provider    string         `json:"provider"`
-    Endpoint    string         `json:"endpoint"`
-    Parameters  map[string]any `json:"parameters"`
-    Credentials map[string]any `json:"credentials"`
-}
-
-// 取消订阅
-type TriggerUnsubscribeRequest struct {
-    Provider     string         `json:"provider"`
-    Subscription map[string]any `json:"subscription"` // 必需
-    Credentials  map[string]any `json:"credentials"`
-}
-
-// 调用事件
-type TriggerInvokeEventRequest struct {
-    Provider       string         `json:"provider"`
-    Event          string         `json:"event"`
-    RawHTTPRequest string         `json:"raw_http_request"`
-    Parameters     map[string]any `json:"parameters"`
-    Subscription   map[string]any `json:"subscription"` // 必需
-    Payload        map[string]any `json:"payload"`
-    Credentials    map[string]any `json:"credentials"`
-}
-
-// 派发事件
-type TriggerDispatchEventRequest struct {
-    Provider       string         `json:"provider"`
-    Subscription   map[string]any `json:"subscription"` // 必需
-    RawHTTPRequest string         `json:"raw_http_request"`
-    Credentials    map[string]any `json:"credentials"`
-}
-```
-
-#### 6.5.4 响应结构
-
-```go
-// 事件调用响应
-type TriggerInvokeEventResponse struct {
-    Variables map[string]any `json:"variables"`
-    Cancelled bool           `json:"cancelled"`
-}
-
-// 事件派发响应
-type TriggerDispatchEventResponse struct {
-    UserID   string         `json:"user_id"`
-    Events   []string       `json:"events"`
-    Payload  map[string]any `json:"payload"`
-    Response string         `json:"response"`
-}
-
-// 订阅响应
-type TriggerSubscribeResponse struct {
-    Subscription map[string]any `json:"subscription"`
-}
-```
-
----
-
-### 6.6 Endpoint 插件
-
-**用途**: 提供 HTTP 端点扩展，支持自定义 API 路由。
-
-**声明文件位置**: `pkg/entities/plugin_entities/endpoint_declaration.go`
-
-#### 6.6.1 声明结构
-
-```go
-type EndpointProviderDeclaration struct {
-    Settings      []ProviderConfig      `json:"settings"`  // 配置项 (可选)
-    Endpoints     []EndpointDeclaration `json:"endpoints"` // 端点列表
-    EndpointFiles []string              `json:"endpoint_files"` // 端点定义文件
-}
-
-type EndpointDeclaration struct {
-    Path   string         `json:"path"`   // URL 路径 (必需)
-    Method EndpointMethod `json:"method"` // HTTP 方法 (必需)
-    Hidden bool           `json:"hidden"` // 是否隐藏
-}
-```
-
-#### 6.6.2 支持的 HTTP 方法
-
-```go
-const (
-    EndpointMethodHead    = "HEAD"
-    EndpointMethodGet     = "GET"
-    EndpointMethodPost    = "POST"
-    EndpointMethodPut     = "PUT"
-    EndpointMethodDelete  = "DELETE"
-    EndpointMethodOptions = "OPTIONS"
-)
-```
-
-#### 6.6.3 请求示例
-
-```go
-type RequestInvokeEndpoint struct {
-    RawHttpRequest string         `json:"raw_http_request"` // Hex 编码的原始请求
-    Settings       map[string]any `json:"settings"`
-}
-```
-
----
-
-## 7. 插件目录结构
-
-本节介绍各类型插件的标准目录结构，方便开发者参考。
-
-### 7.1 Tool 插件
-
-```
-plugin-name/
-├── manifest.yaml                    # 插件清单
-├── README.md                        # 说明文档
-├── requirements.txt                 # Python 依赖
-├── _assets/
-│   └── icon.svg                     # 插件图标
-├── provider/
-│   ├── {provider_name}.yaml         # Provider 声明（包含凭证配置）
-│   └── {provider_name}.py           # Provider 实现（凭证验证逻辑）
-└── tools/
-    ├── {tool_name}.yaml             # Tool 声明（参数定义）
-    └── {tool_name}.py               # Tool 实现（invoke 方法）
-```
-
-**manifest.yaml 配置：**
-```yaml
-plugins:
-  tools:
-    - provider/{provider_name}.yaml
-```
-
----
-
-### 7.2 Model 插件
-
-```
-plugin-name/
-├── manifest.yaml
-├── README.md
-├── requirements.txt
-├── _assets/
-│   └── icon.svg
-├── provider/
-│   ├── {provider_name}.yaml         # Provider 声明
-│   └── {provider_name}.py           # Provider 实现
-└── models/
-    ├── llm/                         # 大语言模型
-    │   ├── llm.yaml
-    │   └── llm.py
-    ├── text_embedding/              # 文本嵌入模型
-    │   ├── text_embedding.yaml
-    │   └── text_embedding.py
-    ├── rerank/                       # 重排序模型
-    │   ├── rerank.yaml
-    │   └── rerank.py
-    ├── tts/                          # 文本转语音
-    │   ├── tts.yaml
-    │   └── tts.py
-    ├── speech2text/                  # 语音转文本
-    │   ├── speech2text.yaml
-    │   └── speech2text.py
-    └── moderation/                   # 内容审核模型
-        ├── moderation.yaml
-        └── moderation.py
-```
-
-**manifest.yaml 配置：**
-```yaml
-plugins:
-  models:
-    - provider/{provider_name}.yaml
-```
-
-**注意**：不需要所有模型类型，按需创建对应子目录。
-
----
-
-### 7.3 Extension/Endpoint 插件
-
-```
-plugin-name/
-├── manifest.yaml
-├── README.md
-├── requirements.txt
-├── _assets/
-│   └── icon.svg
-├── group/
-│   └── {group_name}.yaml            # Endpoint 分组声明
-└── endpoints/
-    ├── {endpoint_name}.yaml         # Endpoint 声明（路由配置）
-    └── {endpoint_name}.py           # Endpoint 实现（HTTP 处理）
-```
-
-**manifest.yaml 配置：**
-```yaml
-plugins:
-  endpoints:
-    - group/{group_name}.yaml
-```
-
----
-
-### 7.4 Agent Strategy 插件
-
-```
-plugin-name/
-├── manifest.yaml
-├── README.md
-├── requirements.txt
-├── _assets/
-│   └── icon.svg
-├── provider/
-│   └── {provider_name}.yaml         # Provider 声明
-└── strategies/
-    ├── {strategy_name}.yaml         # Strategy 声明（参数定义）
-    └── {strategy_name}.py           # Strategy 实现
-```
-
-**manifest.yaml 配置：**
-```yaml
-plugins:
-  agent_strategies:
-    - provider/{provider_name}.yaml
-```
-
----
-
-### 7.5 Datasource 插件
-
-```
-plugin-name/
-├── manifest.yaml
-├── README.md
-├── requirements.txt
-├── _assets/
-│   └── icon.svg
-├── provider/
-│   └── {provider_name}.yaml         # Provider 声明
-└── datasources/
-    ├── {datasource_name}.yaml       # Datasource 声明
-    └── {datasource_name}.py         # Datasource 实现（Retrieve/RetrieveMany）
-```
-
-**manifest.yaml 配置：**
-```yaml
-plugins:
-  datasources:
-    - provider/{provider_name}.yaml
-```
-
----
-
-### 7.6 Trigger 插件
-
-```
-plugin-name/
-├── manifest.yaml
-├── README.md
-├── requirements.txt
-├── _assets/
-│   └── icon.svg
-├── provider/
-│   ├── {provider_name}.yaml         # Provider 声明
-│   └── {provider_name}.py           # Provider 实现（Start/Destroy/OnEvent）
-└── events/
-    ├── {event_name}_event.yaml      # Event 声明
-    └── {event_name}_event.py        # Event 实现
-```
-
-**manifest.yaml 配置：**
-```yaml
-plugins:
-  triggers:
-    - provider/{provider_name}.yaml
-```
-
----
-
-### 7.7 目录结构对比表
-
-| 插件类型 | Provider 目录 | 核心功能目录 | manifest plugins 字段 |
-|---------|--------------|-------------|---------------------|
+| Plugin Type | Provider Directory | Core Function Directory | manifest plugins Field |
+|-------------|-------------------|------------------------|----------------------|
 | Tool | `provider/` | `tools/` | `tools` |
 | Model | `provider/` | `models/{type}/` | `models` |
 | Extension | `group/` | `endpoints/` | `endpoints` |
@@ -1543,57 +852,56 @@ plugins:
 | Datasource | `provider/` | `datasources/` | `datasources` |
 | Trigger | `provider/` | `events/` | `triggers` |
 
+### 6.2 Common Files Description
+
+| File | Purpose |
+|------|---------|
+| `manifest.yaml` | Plugin metadata, version, permission declarations |
+| `pyproject.toml` | Python dependencies (uv managed) |
+| `main.py` | Plugin entry point |
+| `README.md` | Plugin documentation |
+| `_assets/icon.svg` | Plugin icon (SVG format) |
+| `*.yaml` | Declaration files (parameters, schema, i18n) |
+| `*.py` | Implementation files (business logic) |
+
 ---
 
-### 7.8 通用文件说明
+## Appendix
 
-| 文件 | 用途 |
-|-----|------|
-| `manifest.yaml` | 插件元数据、版本、权限声明 |
-| `requirements.txt` | Python 依赖列表 |
-| `README.md` | 插件说明文档 |
-| `_assets/icon.svg` | 插件图标（SVG 格式） |
-| `*.yaml` | 声明文件（参数、schema、i18n） |
-| `*.py` | 实现文件（业务逻辑） |
-
----
-
-## 附录
-
-### A. 插件清单 (Manifest) 完整结构
+### A. Plugin Manifest Complete Structure
 
 ```go
 type PluginDeclaration struct {
-    // 基本信息
-    Version     string     // 版本号 (语义化版本)
-    Type        string     // 类型: "plugin"
-    Author      string     // 作者 (1-64 字符)
-    Name        string     // 名称 (1-128 字符)
-    Label       I18nObject // 多语言标签 (必需)
-    Description I18nObject // 多语言描述 (必需)
-    Icon        string     // 图标路径 (必需, 最长 128 字符)
-    IconDark    string     // 深色主题图标 (可选)
+    // Basic information
+    Version     string     // Version number (semantic versioning)
+    Type        string     // Type: "plugin"
+    Author      string     // Author (1-64 characters)
+    Name        string     // Name (1-128 characters)
+    Label       I18nObject // Multilingual label (required)
+    Description I18nObject // Multilingual description (required)
+    Icon        string     // Icon path (required, max 128 characters)
+    IconDark    string     // Dark theme icon (optional)
 
-    // 资源要求
+    // Resource requirements
     Resource PluginResourceRequirement
 
-    // 插件组件声明
+    // Plugin component declarations
     Plugins PluginExtensions
 
-    // 运行时元信息
+    // Runtime meta information
     Meta PluginMeta
 
-    // 分类标签
+    // Category tags
     Tags []PluginTag
 
-    // 时间戳
+    // Timestamp
     CreatedAt time.Time
 
-    // 可选信息
-    Privacy *string // 隐私政策
-    Repo    *string // 代码仓库
+    // Optional information
+    Privacy *string // Privacy policy
+    Repo    *string // Code repository
 
-    // 提供者声明 (根据类型选择)
+    // Provider declarations (select based on type)
     Verified      bool
     Endpoint      *EndpointProviderDeclaration
     Model         *ModelProviderDeclaration
@@ -1603,68 +911,68 @@ type PluginDeclaration struct {
     Trigger       *TriggerProviderDeclaration
 }
 
-// 资源要求
+// Resource requirements
 type PluginResourceRequirement struct {
-    Memory     int64                        // 内存 (字节)
-    Permission *PluginPermissionRequirement // 权限要求
+    Memory     int64                        // Memory (bytes)
+    Permission *PluginPermissionRequirement // Permission requirements
 }
 
-// 权限要求
+// Permission requirements
 type PluginPermissionRequirement struct {
-    Tool     *PluginPermissionToolRequirement     // 工具调用权限
-    Model    *PluginPermissionModelRequirement    // 模型调用权限
-    Node     *PluginPermissionNodeRequirement     // 节点调用权限
-    Endpoint *PluginPermissionEndpointRequirement // 端点注册权限
-    App      *PluginPermissionAppRequirement      // 应用调用权限
-    Storage  *PluginPermissionStorageRequirement  // 存储权限
+    Tool     *PluginPermissionToolRequirement     // Tool invocation permission
+    Model    *PluginPermissionModelRequirement    // Model invocation permission
+    Node     *PluginPermissionNodeRequirement     // Node invocation permission
+    Endpoint *PluginPermissionEndpointRequirement // Endpoint registration permission
+    App      *PluginPermissionAppRequirement      // App invocation permission
+    Storage  *PluginPermissionStorageRequirement  // Storage permission
 }
 
-// 运行时元信息
+// Runtime meta information
 type PluginMeta struct {
-    Version            string   // 元信息版本
-    Arch               []Arch   // 支持架构: amd64, arm64
+    Version            string   // Meta version
+    Arch               []Arch   // Supported architectures: amd64, arm64
     Runner             PluginRunner
-    MinimumDifyVersion *string  // 最低 Dify 版本
+    MinimumDifyVersion *string  // Minimum Dify version
 }
 
 type PluginRunner struct {
-    Language   string // 语言: python
-    Version    string // 版本: 3.11
-    Entrypoint string // 入口点
+    Language   string // Language: python
+    Version    string // Version: 3.11
+    Entrypoint string // Entry point
 }
 ```
 
-### B. 多语言对象结构
+### B. Multilingual Object Structure
 
 ```go
 type I18nObject struct {
-    EnUS   string `json:"en_US"`            // 英文 (必需)
-    JaJp   string `json:"ja_JP,omitempty"`  // 日文
-    ZhHans string `json:"zh_Hans,omitempty"` // 简体中文
-    PtBr   string `json:"pt_BR,omitempty"`  // 葡萄牙语
+    EnUS   string `json:"en_US"`            // English (required)
+    JaJp   string `json:"ja_JP,omitempty"`  // Japanese
+    ZhHans string `json:"zh_Hans,omitempty"` // Simplified Chinese
+    PtBr   string `json:"pt_BR,omitempty"`  // Portuguese
 }
 ```
 
-### C. 支持的标签
+### C. Supported Tags
 
 ```go
-// 可用标签
+// Available tags
 search, image, videos, weather, finance, design, travel, social,
 news, medical, productivity, education, business, entertainment,
 utilities, agent, rag, other, trigger
 ```
 
-### D. 配置类型
+### D. Configuration Types
 
 ```go
 const (
-    CONFIG_TYPE_SECRET_INPUT   = "secret-input"   // 敏感输入
-    CONFIG_TYPE_TEXT_INPUT     = "text-input"     // 文本输入
-    CONFIG_TYPE_SELECT         = "select"         // 下拉选择
-    CONFIG_TYPE_BOOLEAN        = "boolean"        // 布尔值
-    CONFIG_TYPE_MODEL_SELECTOR = "model-selector" // 模型选择器
-    CONFIG_TYPE_APP_SELECTOR   = "app-selector"   // 应用选择器
-    CONFIG_TYPE_TOOLS_SELECTOR = "array[tools]"   // 工具选择器
-    CONFIG_TYPE_ANY            = "any"            // 任意类型
+    CONFIG_TYPE_SECRET_INPUT   = "secret-input"   // Sensitive input
+    CONFIG_TYPE_TEXT_INPUT     = "text-input"     // Text input
+    CONFIG_TYPE_SELECT         = "select"         // Dropdown selection
+    CONFIG_TYPE_BOOLEAN        = "boolean"        // Boolean value
+    CONFIG_TYPE_MODEL_SELECTOR = "model-selector" // Model selector
+    CONFIG_TYPE_APP_SELECTOR   = "app-selector"   // App selector
+    CONFIG_TYPE_TOOLS_SELECTOR = "array[tools]"   // Tools selector
+    CONFIG_TYPE_ANY            = "any"            // Any type
 )
 ```

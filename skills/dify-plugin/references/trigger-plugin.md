@@ -6,21 +6,18 @@ Trigger plugins receive external webhooks to start Dify workflows.
 
 ```
 my-trigger/
-├── manifest.yaml
-├── main.py
-├── pyproject.toml
+├── manifest.yaml                    # Plugin manifest
+├── main.py                          # Entry point
+├── pyproject.toml                   # Dependencies (uv)
+├── README.md                        # Documentation
+├── _assets/
+│   └── icon.svg                     # Plugin icon
 ├── provider/
-│   ├── my_trigger.yaml       # Trigger config + subscription schema
-│   └── my_trigger.py         # Trigger + SubscriptionConstructor
-├── events/
-│   ├── event_name/
-│   │   ├── event_name.yaml   # Event definition
-│   │   └── event_name.py     # Event handler
-│   └── another_event/
-│       ├── another_event.yaml
-│       └── another_event.py
-└── _assets/
-    └── icon.svg
+│   ├── {provider_name}.yaml         # Provider config (subscription schema)
+│   └── {provider_name}.py           # Provider implementation (Start/Destroy/OnEvent)
+└── events/
+    ├── {event_name}_event.yaml      # Event definition
+    └── {event_name}_event.py        # Event implementation
 ```
 
 ## manifest.yaml
@@ -523,6 +520,23 @@ class IssuesEvent(Event):
         # Return variables for workflow
         return Variables(variables=payload)
 ```
+
+## Event Parameter Types
+
+| Type | Description |
+|------|-------------|
+| `string` | Text input |
+| `number` | Numeric value |
+| `boolean` | True/false toggle |
+| `select` | Dropdown selection |
+| `file` | Single file input |
+| `files` | Multiple files |
+| `model-selector` | Model picker |
+| `app-selector` | Dify app picker |
+| `object` | Nested object |
+| `array` | Array of values |
+| `dynamic-select` | Fetches options dynamically |
+| `checkbox` | Multiple selection |
 
 ## Error Types
 

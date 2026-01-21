@@ -6,19 +6,17 @@ Agent Strategy plugins implement custom reasoning strategies for Dify agents (e.
 
 ```
 my-agent-strategy/
-├── manifest.yaml
-├── main.py
-├── pyproject.toml
+├── manifest.yaml                # Plugin manifest
+├── main.py                      # Entry point
+├── pyproject.toml               # Dependencies (uv)
+├── README.md                    # Documentation
+├── _assets/
+│   └── icon.svg                 # Plugin icon
 ├── provider/
-│   ├── my_agent.yaml          # Provider config
-│   └── my_agent.py            # Provider implementation
-├── strategies/
-│   ├── my_strategy.yaml       # Strategy definition
-│   └── my_strategy.py         # Strategy implementation
-├── prompt/                    # Optional
-│   └── template.py            # Prompt templates
-└── _assets/
-    └── icon.svg
+│   └── {provider_name}.yaml     # Provider config
+└── strategies/
+    ├── {strategy_name}.yaml     # Strategy definition (parameters)
+    └── {strategy_name}.py       # Strategy implementation
 ```
 
 ## manifest.yaml
@@ -362,10 +360,18 @@ Thought:"""
 | Type | Description | Example |
 |------|-------------|---------|
 | `model-selector` | Model picker with scope | LLM selection |
-| `array[tools]` | Tool list | Available tools |
+| `array[tools]` | Tool list selector (Agent-specific) | Available tools |
 | `string` | Text input | Query, instruction |
 | `number` | Numeric with min/max | max_iterations |
+| `boolean` | True/false | enable_streaming |
+| `select` | Dropdown selection | strategy_mode |
+| `secret-input` | Encrypted input | api_key |
+| `file` | Single file | context_file |
+| `files` | Multiple files | reference_docs |
+| `app-selector` | Dify app picker | app reference |
 | `any` | Flexible type with scope | Context data |
+
+**Note**: `array[tools]` is unique to Agent Strategy plugins, allowing selection of available tools for the agent loop.
 
 ## Message Types
 
