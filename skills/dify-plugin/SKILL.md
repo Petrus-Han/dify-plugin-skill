@@ -5,46 +5,92 @@ description: Build Dify plugins (Tool, Trigger, Extension, Model, Datasource, Ag
 
 # Dify Plugin Development
 
-## Prerequisites
+## Key Reference Repositories
 
-See [preparation.md](references/preparation.md) for environment setup and CLI installation on different platforms.
+| Repository | Path | Purpose |
+|------------|------|---------|
+| **dify-official-plugins** | `/Users/petrus/Source/dify/ee/dify-official-plugins` | Official plugin examples - study real implementations |
+| **dify-plugin-daemon** | `/Users/petrus/Source/dify/ee/dify-plugin-daemon` | Plugin runtime & CLI - check interface definitions |
+| **dify** | `/Users/petrus/Source/dify/ee/dify` | Dify core - remote debugging host |
 
-## Quick Start
+## Quick Decision: Which Plugin Type?
 
-```bash
-# Install tools (macOS)
-brew tap langgenius/dify && brew install dify
-curl -LsSf https://astral.sh/uv/install.sh | sh
-
-# Create plugin
-dify plugin init
-
-# Setup dependencies
-cd my-plugin && uv init --no-readme && uv add dify_plugin
-
-# Package and deploy
-dify plugin package ./my-plugin
+```
+User wants to...
+├─ "Add capability to workflow/agent" ───────► Tool (API calls, logic, file processing)
+├─ "Start workflow when webhook received" ───► Trigger
+├─ "Expose HTTP endpoint (OAuth, webhook)" ──► Extension
+├─ "Add new LLM/Embedding/TTS provider" ─────► Model
+├─ "Import docs from cloud storage" ─────────► Datasource
+└─ "Custom agent loop (ReAct, CoT)" ─────────► Agent Strategy
 ```
 
 ## Plugin Types
 
-| Type | Purpose | Reference |
-|------|---------|-----------|
-| **Tool** | Integrate external APIs | [tool-plugin.md](references/tool-plugin.md) |
-| **Trigger** | Start workflows from webhooks | [trigger-plugin.md](references/trigger-plugin.md) |
-| **Extension** | Custom HTTP endpoints | [extension-plugin.md](references/extension-plugin.md) |
-| **Model** | Add AI model providers | [model-plugin.md](references/model-plugin.md) |
-| **Datasource** | Connect external storage | [datasource-plugin.md](references/datasource-plugin.md) |
-| **Agent Strategy** | Custom agent reasoning | [agent-strategy-plugin.md](references/agent-strategy-plugin.md) |
+| Type | Purpose | Reference | Example in official-plugins |
+|------|---------|-----------|----------------------------|
+| **Tool** | Add capabilities: API calls, logic operations, file processing | [tool-plugin.md](references/tool-plugin.md) | `tools/wikipedia`, `tools/github` |
+| **Trigger** | Start workflows from webhooks | [trigger-plugin.md](references/trigger-plugin.md) | `triggers/github_trigger` |
+| **Extension** | Custom HTTP endpoints | [extension-plugin.md](references/extension-plugin.md) | `extensions/slack_bot` |
+| **Model** | Add AI model providers | [model-plugin.md](references/model-plugin.md) | `models/openai`, `models/anthropic` |
+| **Datasource** | Connect external storage | [datasource-plugin.md](references/datasource-plugin.md) | `datasources/github` |
+| **Agent Strategy** | Custom agent reasoning | [agent-strategy-plugin.md](references/agent-strategy-plugin.md) | `agent-strategies/cot_agent` |
 
-## Development SOP
+## Development Workflow
 
-1. **Prepare** - Read [preparation.md](references/preparation.md), install CLI and dependencies
-2. **Choose Type** - Identify plugin type from Plugin Types table above
-3. **Read API Docs** - If integrating external systems, read their API documentation first
-4. **Study Examples** - Check [plugins_reference.md](references/plugins_reference.md) for best practices
-5. **Develop** - Run `dify plugin init`, read the corresponding plugin reference (e.g., [tool-plugin.md](references/tool-plugin.md) for Tool), implement provider and tools
-6. **Test** - Validate credentials, debug with [debugging.md](references/debugging.md)
+### Phase 1: Understand Requirements
+1. Determine plugin type using decision tree above
+2. If integrating external API, read their API documentation first
+3. Find similar plugin in `dify-official-plugins` as reference
+
+### Phase 2: Initialize Project
+```bash
+# Create plugin scaffold
+dify plugin init
+# Follow prompts: choose category, set name, configure permissions
+
+# Setup Python environment
+cd my-plugin
+uv init --no-readme
+uv add dify_plugin
+```
+
+### Phase 3: Implement
+1. Read the corresponding type reference (e.g., [tool-plugin.md](references/tool-plugin.md))
+2. Edit `manifest.yaml` - see [MANIFEST_REFERENCE.md](references/MANIFEST_REFERENCE.md) for field rules
+3. Create `provider/*.yaml` - credentials schema
+4. Implement `provider/*.py` - credential validation
+5. Create tool/event definitions and implementations
+
+### Phase 4: Test & Debug
+```bash
+# Get debug credentials (asks for Dify host, email, password)
+python scripts/get_debug_key.py --host <dify-url> --email <email> --password <password>
+
+# Or output directly to .env
+python scripts/get_debug_key.py --host <url> --email <email> --password <pwd> --output-env > .env
+
+# Run plugin in debug mode
+uv run python -m main
+```
+
+See [debugging.md](references/debugging.md) for detailed debugging guide.
+
+### Phase 5: Package & Deploy
+```bash
+dify plugin package ./my-plugin
+```
+
+## When Stuck: Where to Look
+
+| Problem | Solution |
+|---------|----------|
+| manifest.yaml validation error | [MANIFEST_REFERENCE.md](references/MANIFEST_REFERENCE.md) |
+| How to structure YAML files | Type reference + `dify-official-plugins` examples |
+| Python interface/method signature | `dify-plugin-daemon` source code |
+| Runtime behavior, hooks | [PLUGIN_ARCHITECTURE.md](references/PLUGIN_ARCHITECTURE.md) |
+| Error handling patterns | [best-practices.md](references/best-practices.md) |
+| Working examples | [plugins_reference.md](references/plugins_reference.md) |
 
 ## Core Structure
 
@@ -71,9 +117,7 @@ Only 19 tags accepted: `search`, `image`, `videos`, `weather`, `finance`, `desig
 
 ## Best Practices
 
-- Set `timeout=30` for HTTP calls
-- Don't use LLM just for formatting
-- One plugin per API service, one tool per operation
+See [best-practices.md](references/best-practices.md) for detailed guidelines including execution status mechanics.
 
 ## References
 
@@ -90,6 +134,7 @@ Only 19 tags accepted: `search`, `image`, `videos`, `weather`, `finance`, `desig
 - [agent-strategy-plugin.md](references/agent-strategy-plugin.md) - Agent Strategy plugin details
 
 ### Additional References
+- [best-practices.md](references/best-practices.md) - **Development best practices** (error handling, execution status, common pitfalls)
 - [yaml-schemas.md](references/yaml-schemas.md) - Common YAML patterns
 - [plugins_reference.md](references/plugins_reference.md) - Official plugin examples
 - [debugging.md](references/debugging.md) - Debugging techniques

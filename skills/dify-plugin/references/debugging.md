@@ -4,9 +4,32 @@
 
 1. **Get Debug Credentials**
 
-   - Login to Dify console
-   - Go to Plugins → Remote Debugging
-   - Copy Remote URL and Debug Key
+   Ask user for:
+   - Dify host URL (e.g., `https://your-dify.com`)
+   - Email and password (suggest creating a dedicated user/workspace for development)
+
+   Then run the script to get debugging key:
+
+   ```bash
+   # From skill directory
+   python scripts/get_debug_key.py \
+     --host https://your-dify.com \
+     --email user@example.com \
+     --password yourpassword
+
+   # Or output directly as .env format
+   python scripts/get_debug_key.py \
+     --host https://your-dify.com \
+     --email user@example.com \
+     --password yourpassword \
+     --output-env > .env
+   ```
+
+   Script location: [scripts/get_debug_key.py](../scripts/get_debug_key.py)
+
+   **What the script does:**
+   - Login: `POST {host}/console/api/login`
+   - Get key: `GET {host}/console/api/workspaces/current/plugin/debugging-key`
 
 2. **Configure .env**
 
@@ -85,22 +108,4 @@ dependencies = [
     "dify_plugin>=0.1.0",
     "httpx>=0.27.0",
 ]
-```
-
-## VS Code Debug Config
-
-```json
-{
-  "version": "0.2.0",
-  "configurations": [
-    {
-      "name": "Debug Plugin",
-      "type": "debugpy",
-      "request": "launch",
-      "module": "main",
-      "cwd": "${workspaceFolder}",
-      "envFile": "${workspaceFolder}/.env"
-    }
-  ]
-}
 ```
