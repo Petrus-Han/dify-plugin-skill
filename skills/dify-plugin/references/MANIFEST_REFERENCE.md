@@ -1,37 +1,37 @@
-# Dify Plugin Manifest.yaml 完整参考指南
+# Dify Plugin Manifest.yaml Complete Reference Guide
 
-本文档提供 manifest.yaml 的完整字段规则、验证约束和示例，帮助开发者正确编写插件清单文件。
+This document provides complete field rules, validation constraints, and examples for manifest.yaml to help developers correctly write plugin manifest files.
 
-## 目录
+## Table of Contents
 
-1. [基础结构](#1-基础结构)
-2. [字段验证规则详解](#2-字段验证规则详解)
-3. [各插件类型声明](#3-各插件类型声明)
-4. [完整示例](#4-完整示例)
-5. [常见错误与解决方案](#5-常见错误与解决方案)
+1. [Basic Structure](#1-basic-structure)
+2. [Field Validation Rules](#2-field-validation-rules)
+3. [Plugin Type Declarations](#3-plugin-type-declarations)
+4. [Complete Examples](#4-complete-examples)
+5. [Common Errors and Solutions](#5-common-errors-and-solutions)
 
 ---
 
-## 1. 基础结构
+## 1. Basic Structure
 
-### 1.1 manifest.yaml 顶层结构
+### 1.1 manifest.yaml Top-Level Structure
 
 ```yaml
-# 基础信息 (必需)
-version: "0.0.1"              # 语义化版本
-type: plugin                   # 固定值
-author: your-name              # 作者名
-name: plugin-name              # 插件名
-label:                         # 多语言标签
+# Basic Information (Required)
+version: "0.0.1"              # Semantic version
+type: plugin                   # Fixed value
+author: your-name              # Author name
+name: plugin-name              # Plugin name
+label:                         # Multi-language labels
   en_US: "Plugin Name"
   zh_Hans: "插件名称"
-description:                   # 多语言描述
+description:                   # Multi-language descriptions
   en_US: "Plugin description"
   zh_Hans: "插件描述"
-icon: icon.svg                 # 图标路径
-created_at: 2024-01-01T00:00:00Z  # 创建时间
+icon: icon.svg                 # Icon path
+created_at: 2024-01-01T00:00:00Z  # Creation time
 
-# 运行时元信息 (必需)
+# Runtime Metadata (Required)
 meta:
   version: "0.0.1"
   arch:
@@ -42,10 +42,10 @@ meta:
     version: "3.12"
     entrypoint: main
 
-# 资源要求 (必需)
+# Resource Requirements (Required)
 resource:
-  memory: 268435456            # 内存限制 (字节)
-  permission:                  # 权限配置 (可选)
+  memory: 268435456            # Memory limit (bytes)
+  permission:                  # Permission configuration (optional)
     tool:
       enabled: true
     model:
@@ -54,7 +54,7 @@ resource:
       enabled: true
       size: 1048576            # 1MB
 
-# 插件组件声明 (必需，至少一个)
+# Plugin Component Declarations (Required, at least one)
 plugins:
   tools:
     - provider/tools/my_tool.yaml
@@ -64,246 +64,246 @@ plugins:
   datasources: []
   triggers: []
 
-# 可选字段
-icon_dark: icon_dark.svg       # 深色主题图标
-tags:                          # 分类标签
+# Optional Fields
+icon_dark: icon_dark.svg       # Dark theme icon
+tags:                          # Category tags
   - productivity
   - utilities
-privacy: "https://example.com/privacy"   # 隐私政策 URL
-repo: "https://github.com/user/repo"     # 代码仓库 URL
+privacy: "https://example.com/privacy"   # Privacy policy URL
+repo: "https://github.com/user/repo"     # Repository URL
 
-# 提供者声明 (根据插件类型选择)
-tool: ...                      # Tool 插件声明
-model: ...                     # Model 插件声明
-agent_strategy: ...            # Agent Strategy 插件声明
-datasource: ...                # Datasource 插件声明
-trigger: ...                   # Trigger 插件声明
-endpoint: ...                  # Endpoint 插件声明
+# Provider Declarations (choose based on plugin type)
+tool: ...                      # Tool plugin declaration
+model: ...                     # Model plugin declaration
+agent_strategy: ...            # Agent Strategy plugin declaration
+datasource: ...                # Datasource plugin declaration
+trigger: ...                   # Trigger plugin declaration
+endpoint: ...                  # Endpoint plugin declaration
 ```
 
 ---
 
-## 2. 字段验证规则详解
+## 2. Field Validation Rules
 
-### 2.1 版本号 (version)
+### 2.1 Version (version)
 
-**规则**: `^\d{1,4}(\.\d{1,4}){2}(-\w{1,16})?$`
+**Pattern**: `^\d{1,4}(\.\d{1,4}){2}(-\w{1,16})?$`
 
-| 示例 | 有效性 | 说明 |
-|------|--------|------|
-| `0.0.1` | ✅ | 标准语义化版本 |
-| `1.2.3` | ✅ | 标准语义化版本 |
-| `1.0.0-beta` | ✅ | 带预发布标识 |
-| `1.0.0-alpha1` | ✅ | 带预发布标识 |
-| `1` | ❌ | 缺少次版本号和补丁号 |
-| `1.0` | ❌ | 缺少补丁号 |
-| `1.0.0.0.0` | ❌ | 版本段过多 |
-| `v1.0.0` | ❌ | 不能有 "v" 前缀 |
+| Example | Valid | Description |
+|---------|-------|-------------|
+| `0.0.1` | ✅ | Standard semantic version |
+| `1.2.3` | ✅ | Standard semantic version |
+| `1.0.0-beta` | ✅ | With pre-release identifier |
+| `1.0.0-alpha1` | ✅ | With pre-release identifier |
+| `1` | ❌ | Missing minor and patch version |
+| `1.0` | ❌ | Missing patch version |
+| `1.0.0.0.0` | ❌ | Too many version segments |
+| `v1.0.0` | ❌ | Cannot have "v" prefix |
 
-### 2.2 类型 (type)
+### 2.2 Type (type)
 
-**规则**: 必须等于 `plugin`
+**Rule**: Must equal `plugin`
 
 ```yaml
-type: plugin  # 唯一有效值
+type: plugin  # Only valid value
 ```
 
-### 2.3 作者名 (author)
+### 2.3 Author Name (author)
 
-**规则**: `^[a-z0-9_-]{1,64}$`
+**Pattern**: `^[a-z0-9_-]{1,64}$`
 
-| 示例 | 有效性 | 说明 |
-|------|--------|------|
-| `langgenius` | ✅ | 小写字母 |
-| `my-company` | ✅ | 带连字符 |
-| `user_123` | ✅ | 带下划线和数字 |
-| `MyCompany` | ❌ | 不能有大写字母 |
-| `my company` | ❌ | 不能有空格 |
-| `a` | ✅ | 最短 1 字符 |
-| `a...64chars...` | ✅ | 最长 64 字符 |
+| Example | Valid | Description |
+|---------|-------|-------------|
+| `langgenius` | ✅ | Lowercase letters |
+| `my-company` | ✅ | With hyphen |
+| `user_123` | ✅ | With underscore and numbers |
+| `MyCompany` | ❌ | No uppercase letters allowed |
+| `my company` | ❌ | No spaces allowed |
+| `a` | ✅ | Minimum 1 character |
+| `a...64chars...` | ✅ | Maximum 64 characters |
 
-### 2.4 插件名 (name)
+### 2.4 Plugin Name (name)
 
-**规则**: `^[a-z0-9_-]{1,128}$`
+**Pattern**: `^[a-z0-9_-]{1,128}$`
 
-| 示例 | 有效性 | 说明 |
-|------|--------|------|
-| `my-plugin` | ✅ | 带连字符 |
-| `my_tool_v2` | ✅ | 带下划线和数字 |
-| `MyPlugin` | ❌ | 不能有大写字母 |
-| `my plugin` | ❌ | 不能有空格 |
+| Example | Valid | Description |
+|---------|-------|-------------|
+| `my-plugin` | ✅ | With hyphen |
+| `my_tool_v2` | ✅ | With underscore and numbers |
+| `MyPlugin` | ❌ | No uppercase letters allowed |
+| `my plugin` | ❌ | No spaces allowed |
 
-### 2.5 多语言对象 (I18nObject)
+### 2.5 Internationalization Object (I18nObject)
 
 ```yaml
 label:
-  en_US: "English Label"      # 必需，1-1023 字符
-  zh_Hans: "中文标签"          # 可选，最长 1023 字符
-  ja_JP: "日本語ラベル"        # 可选，最长 1023 字符
-  pt_BR: "Rótulo em Português" # 可选，最长 1023 字符
+  en_US: "English Label"      # Required, 1-1023 characters
+  zh_Hans: "中文标签"          # Optional, max 1023 characters
+  ja_JP: "日本語ラベル"        # Optional, max 1023 characters
+  pt_BR: "Rótulo em Português" # Optional, max 1023 characters
 ```
 
-**规则**:
-- `en_US`: **必需**，长度 1-1023 字符
-- `zh_Hans`, `ja_JP`, `pt_BR`: 可选，最长 1023 字符
+**Rules**:
+- `en_US`: **Required**, 1-1023 characters
+- `zh_Hans`, `ja_JP`, `pt_BR`: Optional, max 1023 characters
 
-### 2.6 图标 (icon)
+### 2.6 Icon (icon)
 
-**规则**: 必需，最长 128 字符
+**Rule**: Required, max 128 characters
 
 ```yaml
-icon: icon.svg                 # 相对于插件根目录的路径
-icon_dark: icon_dark.svg       # 可选，深色主题图标
+icon: icon.svg                 # Path relative to plugin root
+icon_dark: icon_dark.svg       # Optional, dark theme icon
 ```
 
-### 2.7 运行时元信息 (meta)
+### 2.7 Runtime Metadata (meta)
 
 ```yaml
 meta:
-  version: "0.0.1"             # 必需，语义化版本
-  arch:                        # 必需，支持的架构
-    - amd64                    # x86_64 架构
-    - arm64                    # ARM64 架构
-  runner:                      # 必需，运行时配置
-    language: python           # 必需，目前仅支持 "python"
-    version: "3.12"            # 必需，Python 版本，最长 128 字符
-    entrypoint: main           # 必需，入口模块，最长 256 字符
-  minimum_dify_version: "0.8.0" # 可选，最低 Dify 版本
+  version: "0.0.1"             # Required, semantic version
+  arch:                        # Required, supported architectures
+    - amd64                    # x86_64 architecture
+    - arm64                    # ARM64 architecture
+  runner:                      # Required, runtime configuration
+    language: python           # Required, currently only "python" supported
+    version: "3.12"            # Required, Python version, max 128 characters
+    entrypoint: main           # Required, entry module, max 256 characters
+  minimum_dify_version: "0.8.0" # Optional, minimum Dify version
 ```
 
-**支持的架构**:
-- `amd64` - x86_64 架构
-- `arm64` - ARM64 架构
+**Supported Architectures**:
+- `amd64` - x86_64 architecture
+- `arm64` - ARM64 architecture
 
-**支持的语言**:
-- `python` - 目前唯一支持的语言
+**Supported Languages**:
+- `python` - Currently the only supported language
 
-### 2.8 资源要求 (resource)
+### 2.8 Resource Requirements (resource)
 
 ```yaml
 resource:
-  memory: 268435456            # 必需，内存限制 (字节)
-  permission:                  # 可选，权限配置
+  memory: 268435456            # Required, memory limit (bytes)
+  permission:                  # Optional, permission configuration
     tool:
-      enabled: true            # 启用工具调用权限
+      enabled: true            # Enable tool invocation permission
     model:
-      enabled: true            # 启用模型调用权限
-      llm: true                # LLM 调用
-      text_embedding: true     # 文本向量化
-      rerank: true             # 重排序
-      tts: true                # 文本转语音
-      speech2text: true        # 语音转文本
-      moderation: true         # 内容审核
+      enabled: true            # Enable model invocation permission
+      llm: true                # LLM invocation
+      text_embedding: true     # Text embedding
+      rerank: true             # Reranking
+      tts: true                # Text-to-speech
+      speech2text: true        # Speech-to-text
+      moderation: true         # Content moderation
     node:
-      enabled: true            # 启用节点调用权限
+      enabled: true            # Enable node invocation permission
     endpoint:
-      enabled: true            # 启用端点注册权限
+      enabled: true            # Enable endpoint registration permission
     app:
-      enabled: true            # 启用应用调用权限
+      enabled: true            # Enable app invocation permission
     storage:
-      enabled: true            # 启用存储权限
-      size: 1048576            # 存储大小限制 (字节)
+      enabled: true            # Enable storage permission
+      size: 1048576            # Storage size limit (bytes)
 ```
 
-**存储大小限制**:
-- 最小: 1024 字节 (1 KB)
-- 最大: 1073741824 字节 (1 GB)
+**Storage Size Limits**:
+- Minimum: 1024 bytes (1 KB)
+- Maximum: 1073741824 bytes (1 GB)
 
-### 2.9 插件组件声明 (plugins)
+### 2.9 Plugin Component Declarations (plugins)
 
 ```yaml
 plugins:
-  tools:                       # 工具定义文件列表
+  tools:                       # Tool definition file list
     - provider/tools/tool1.yaml
     - provider/tools/tool2.yaml
-  models:                      # 模型定义文件列表
+  models:                      # Model definition file list
     - provider/models/model1.yaml
-  endpoints:                   # 端点定义文件列表
+  endpoints:                   # Endpoint definition file list
     - provider/endpoints/endpoint1.yaml
-  agent_strategies:            # Agent 策略定义文件列表
+  agent_strategies:            # Agent strategy definition file list
     - provider/agent_strategies/strategy1.yaml
-  datasources:                 # 数据源定义文件列表
+  datasources:                 # Datasource definition file list
     - provider/datasources/ds1.yaml
-  triggers:                    # 触发器定义文件列表
+  triggers:                    # Trigger definition file list
     - provider/triggers/trigger1.yaml
 ```
 
-**规则**: 每个路径最长 128 字符
+**Rule**: Each path max 128 characters
 
-### 2.10 标签 (tags)
+### 2.10 Tags (tags)
 
-**有效标签值**:
+**Valid Tag Values**:
 ```yaml
 tags:
-  - search           # 搜索
-  - image            # 图像
-  - videos           # 视频
-  - weather          # 天气
-  - finance          # 金融
-  - design           # 设计
-  - travel           # 旅行
-  - social           # 社交
-  - news             # 新闻
-  - medical          # 医疗
-  - productivity     # 生产力
-  - education        # 教育
-  - business         # 商业
-  - entertainment    # 娱乐
-  - utilities        # 工具
+  - search           # Search
+  - image            # Image
+  - videos           # Videos
+  - weather          # Weather
+  - finance          # Finance
+  - design           # Design
+  - travel           # Travel
+  - social           # Social
+  - news             # News
+  - medical          # Medical
+  - productivity     # Productivity
+  - education        # Education
+  - business         # Business
+  - entertainment    # Entertainment
+  - utilities        # Utilities
   - agent            # Agent
   - rag              # RAG
-  - other            # 其他
-  - trigger          # 触发器
+  - other            # Other
+  - trigger          # Trigger
 ```
 
-### 2.11 插件类型互斥规则
+### 2.11 Plugin Type Mutual Exclusion Rules
 
-| 声明的类型 | 可组合 | 不可组合 |
-|-----------|--------|---------|
+| Declared Type | Can Combine With | Cannot Combine With |
+|---------------|------------------|---------------------|
 | `tool` | `endpoint` | `model`, `agent_strategy`, `datasource`, `trigger` |
-| `model` | 无 | 所有其他类型 |
-| `agent_strategy` | 无 | 所有其他类型 |
-| `datasource` | 无 | 所有其他类型 |
-| `trigger` | 无 | 所有其他类型 |
+| `model` | None | All other types |
+| `agent_strategy` | None | All other types |
+| `datasource` | None | All other types |
+| `trigger` | None | All other types |
 | `endpoint` | `tool` | `model`, `agent_strategy`, `datasource`, `trigger` |
 
 ---
 
-## 3. 各插件类型声明
+## 3. Plugin Type Declarations
 
-### 3.1 Tool 插件声明
+### 3.1 Tool Plugin Declaration
 
 ```yaml
 tool:
   identity:
-    author: your-name            # 必需
-    name: tool-provider-name     # 必需，正则: ^[a-zA-Z0-9_-]+$
-    description:                 # 可选
+    author: your-name            # Required
+    name: tool-provider-name     # Required, pattern: ^[a-zA-Z0-9_-]+$
+    description:                 # Optional
       en_US: "Provider description"
       zh_Hans: "提供者描述"
-    icon: icon.svg               # 必需
-    icon_dark: icon_dark.svg     # 可选
-    label:                       # 必需
+    icon: icon.svg               # Required
+    icon_dark: icon_dark.svg     # Optional
+    label:                       # Required
       en_US: "Provider Label"
       zh_Hans: "提供者标签"
-    tags:                        # 可选
+    tags:                        # Optional
       - productivity
 
-  credentials_schema:            # 可选，凭证配置
-    - name: api_key              # 字段名，1-1023 字符
-      type: secret-input         # 类型 (见下方)
-      required: true             # 是否必需
-      default: ""                # 默认值
+  credentials_schema:            # Optional, credential configuration
+    - name: api_key              # Field name, 1-1023 characters
+      type: secret-input         # Type (see below)
+      required: true             # Whether required
+      default: ""                # Default value
       label:
         en_US: "API Key"
         zh_Hans: "API 密钥"
-      help:                      # 帮助文本
+      help:                      # Help text
         en_US: "Enter your API key"
-      placeholder:               # 占位符
+      placeholder:               # Placeholder
         en_US: "sk-..."
-      url: "https://example.com/api-keys"  # 帮助链接
+      url: "https://example.com/api-keys"  # Help link
 
-  oauth_schema:                  # 可选，OAuth 配置
+  oauth_schema:                  # Optional, OAuth configuration
     client_schema:
       - name: client_id
         type: text-input
@@ -317,134 +317,134 @@ tool:
         label:
           en_US: "Access Token"
 
-  tools:                         # 必需，工具列表
+  tools:                         # Required, tool list
     - identity:
-        author: your-name        # 必需
-        name: tool-name          # 必需，正则: ^[a-zA-Z0-9_-]+$
+        author: your-name        # Required
+        name: tool-name          # Required, pattern: ^[a-zA-Z0-9_-]+$
         label:
           en_US: "Tool Label"
           zh_Hans: "工具标签"
-      description:               # 必需
+      description:               # Required
         human:
           en_US: "Human-readable description"
           zh_Hans: "人类可读描述"
         llm: "LLM-readable description for tool selection"
-      parameters:                # 工具参数
-        - name: query            # 参数名，1-1023 字符
-          type: string           # 参数类型 (见下方)
+      parameters:                # Tool parameters
+        - name: query            # Parameter name, 1-1023 characters
+          type: string           # Parameter type (see below)
           label:
             en_US: "Query"
             zh_Hans: "查询"
-          human_description:     # 必需
+          human_description:     # Required
             en_US: "Search query"
             zh_Hans: "搜索查询"
-          llm_description: "The search query string"  # LLM 描述
-          form: llm              # 表单类型: schema | form | llm
-          required: true         # 是否必需
-          default: ""            # 默认值
-          min: 0                 # 最小值 (数字类型)
-          max: 100               # 最大值 (数字类型)
-          precision: 2           # 精度 (数字类型)
-          options:               # 选项 (select 类型)
+          llm_description: "The search query string"  # LLM description
+          form: llm              # Form type: schema | form | llm
+          required: true         # Whether required
+          default: ""            # Default value
+          min: 0                 # Minimum value (numeric types)
+          max: 100               # Maximum value (numeric types)
+          precision: 2           # Precision (numeric types)
+          options:               # Options (select type)
             - value: option1
               label:
                 en_US: "Option 1"
-          scope: "all"           # 作用域 (特定类型)
-      output_schema:             # 可选，输出 JSON Schema
+          scope: "all"           # Scope (specific types)
+      output_schema:             # Optional, output JSON Schema
         type: object
         properties:
           result:
             type: string
-      has_runtime_parameters: false  # 是否有运行时参数
+      has_runtime_parameters: false  # Whether has runtime parameters
 ```
 
-#### 凭证/配置类型 (credentials_schema.type)
+#### Credential/Configuration Types (credentials_schema.type)
 
-| 类型 | 说明 |
-|------|------|
-| `secret-input` | 敏感输入 (如 API 密钥) |
-| `text-input` | 普通文本输入 |
-| `select` | 下拉选择 |
-| `boolean` | 布尔开关 |
-| `model-selector` | 模型选择器 |
-| `app-selector` | 应用选择器 |
-| `array[tools]` | 工具数组选择器 |
-| `any` | 任意类型 |
+| Type | Description |
+|------|-------------|
+| `secret-input` | Sensitive input (e.g., API key) |
+| `text-input` | Plain text input |
+| `select` | Dropdown selection |
+| `boolean` | Boolean switch |
+| `model-selector` | Model selector |
+| `app-selector` | App selector |
+| `array[tools]` | Tool array selector |
+| `any` | Any type |
 
-#### 工具参数类型 (parameters.type)
+#### Tool Parameter Types (parameters.type)
 
-| 类型 | 说明 |
-|------|------|
-| `string` | 字符串 |
-| `number` | 数字 |
-| `boolean` | 布尔值 |
-| `select` | 下拉选择 |
-| `secret-input` | 敏感输入 |
-| `file` | 单个文件 |
-| `files` | 多个文件 |
-| `app-selector` | 应用选择器 |
-| `model-selector` | 模型选择器 |
-| `any` | 任意类型 |
-| `dynamic-select` | 动态下拉选择 |
-| `array` | 数组 |
-| `object` | 对象 |
-| `checkbox` | 复选框 |
+| Type | Description |
+|------|-------------|
+| `string` | String |
+| `number` | Number |
+| `boolean` | Boolean |
+| `select` | Dropdown selection |
+| `secret-input` | Sensitive input |
+| `file` | Single file |
+| `files` | Multiple files |
+| `app-selector` | App selector |
+| `model-selector` | Model selector |
+| `any` | Any type |
+| `dynamic-select` | Dynamic dropdown selection |
+| `array` | Array |
+| `object` | Object |
+| `checkbox` | Checkbox |
 
-#### 参数表单类型 (parameters.form)
+#### Parameter Form Types (parameters.form)
 
-| 类型 | 说明 |
-|------|------|
-| `schema` | 在 Schema 中定义 |
-| `form` | 用户表单输入 |
-| `llm` | LLM 自动填充 |
+| Type | Description |
+|------|-------------|
+| `schema` | Defined in Schema |
+| `form` | User form input |
+| `llm` | LLM auto-fill |
 
-#### 作用域 (scope) 配置
+#### Scope Configuration
 
-**model-selector 作用域**:
+**model-selector Scope**:
 ```yaml
-scope: "llm"                    # 单个
-scope: "llm&text-embedding"     # 组合使用 & 分隔
+scope: "llm"                    # Single
+scope: "llm&text-embedding"     # Combined using & separator
 ```
-有效值: `all`, `llm`, `text-embedding`, `rerank`, `tts`, `speech2text`, `moderation`, `vision`, `document`, `tool-call`
+Valid values: `all`, `llm`, `text-embedding`, `rerank`, `tts`, `speech2text`, `moderation`, `vision`, `document`, `tool-call`
 
-**app-selector 作用域**:
+**app-selector Scope**:
 ```yaml
-scope: "all"                    # 所有应用
-scope: "chat&workflow"          # 组合
+scope: "all"                    # All apps
+scope: "chat&workflow"          # Combined
 ```
-有效值: `all`, `chat`, `workflow`, `completion`
+Valid values: `all`, `chat`, `workflow`, `completion`
 
-**any 作用域**:
+**any Scope**:
 ```yaml
-scope: "string"                 # 字符串
-scope: "string&number&object"   # 组合
+scope: "string"                 # String
+scope: "string&number&object"   # Combined
 ```
-有效值: `string`, `number`, `object`, `array[number]`, `array[string]`, `array[object]`, `array[file]`
+Valid values: `string`, `number`, `object`, `array[number]`, `array[string]`, `array[object]`, `array[file]`
 
 ---
 
-### 3.2 Model 插件声明
+### 3.2 Model Plugin Declaration
 
 ```yaml
 model:
-  provider: provider-name        # 必需，最长 255 字符
-  label:                         # 必需
+  provider: provider-name        # Required, max 255 characters
+  label:                         # Required
     en_US: "Provider Name"
     zh_Hans: "提供者名称"
-  description:                   # 可选
+  description:                   # Optional
     en_US: "Provider description"
-  icon_small:                    # 可选，小图标
+  icon_small:                    # Optional, small icon
     en_US: icon_small.svg
-  icon_large:                    # 可选，大图标
+  icon_large:                    # Optional, large icon
     en_US: icon_large.svg
-  background: "#FFFFFF"          # 可选，背景色
-  help:                          # 可选，帮助信息
+  background: "#FFFFFF"          # Optional, background color
+  help:                          # Optional, help information
     title:
       en_US: "Help Title"
     url:
       en_US: "https://help.example.com"
 
-  supported_model_types:         # 必需，支持的模型类型
+  supported_model_types:         # Required, supported model types
     - llm
     - text-embedding
     - rerank
@@ -455,33 +455,33 @@ model:
     - multimodal-embedding
     - multimodal-rerank
 
-  configurate_methods:           # 必需，配置方法
-    - predefined-model           # 预定义模型
-    - customizable-model         # 可自定义模型
+  configurate_methods:           # Required, configuration methods
+    - predefined-model           # Predefined model
+    - customizable-model         # Customizable model
 
-  provider_credential_schema:    # 可选，提供者凭证
+  provider_credential_schema:    # Optional, provider credentials
     credential_form_schemas:
-      - variable: api_key        # 变量名，最长 255 字符
+      - variable: api_key        # Variable name, max 255 characters
         label:
           en_US: "API Key"
         type: secret-input       # text-input | secret-input | select | radio | switch
         required: true
-        default: ""              # 最长 255 字符
+        default: ""              # Max 255 characters
         placeholder:
           en_US: "Enter API key"
         max_length: 256
-        options:                 # select/radio 类型
+        options:                 # For select/radio types
           - label:
               en_US: "Option 1"
-            value: option1       # 最长 255 字符
-            show_on:             # 条件显示
+            value: option1       # Max 255 characters
+            show_on:             # Conditional display
               - variable: other_field
                 value: some_value
-        show_on:                 # 条件显示
+        show_on:                 # Conditional display
           - variable: provider_type
             value: custom
 
-  model_credential_schema:       # 可选，模型凭证
+  model_credential_schema:       # Optional, model credentials
     model:
       label:
         en_US: "Model Name"
@@ -494,22 +494,22 @@ model:
         type: text-input
         required: true
 
-  models:                        # 可选，预定义模型列表
-    - model: gpt-4               # 必需，模型标识，最长 255 字符
+  models:                        # Optional, predefined model list
+    - model: gpt-4               # Required, model identifier, max 255 characters
       label:
         en_US: "GPT-4"
-      model_type: llm            # 必需
-      features:                  # 可选，特性列表
+      model_type: llm            # Required
+      features:                  # Optional, feature list
         - vision
         - tool-use
       fetch_from: predefined-model  # predefined-model | customizable-model
-      model_properties:          # 可选，模型属性
+      model_properties:          # Optional, model properties
         context_size: 128000
         max_tokens: 4096
-      deprecated: false          # 是否废弃
-      parameter_rules:           # 参数规则，最多 128 个
-        - name: temperature      # 必需，最长 255 字符
-          use_template: temperature  # 使用预定义模板
+      deprecated: false          # Whether deprecated
+      parameter_rules:           # Parameter rules, max 128 entries
+        - name: temperature      # Required, max 255 characters
+          use_template: temperature  # Use predefined template
         - name: max_tokens
           label:
             en_US: "Max Tokens"
@@ -520,67 +520,67 @@ model:
           max: 128000
           help:
             en_US: "Maximum output tokens"
-      pricing:                   # 可选，定价信息
+      pricing:                   # Optional, pricing information
         input: 0.00003
         output: 0.00006
         unit: 0.001
         currency: USD
 ```
 
-#### 模型类型 (model_type)
+#### Model Types (model_type)
 
-| 类型 | 说明 |
-|------|------|
-| `llm` | 语言模型 |
-| `text-embedding` | 文本向量化 |
-| `rerank` | 重排序 |
-| `speech2text` | 语音转文本 |
-| `moderation` | 内容审核 |
-| `tts` | 文本转语音 |
-| `text2img` | 文本生成图片 |
-| `multimodal-embedding` | 多模态向量化 |
-| `multimodal-rerank` | 多模态重排序 |
+| Type | Description |
+|------|-------------|
+| `llm` | Language model |
+| `text-embedding` | Text embedding |
+| `rerank` | Reranking |
+| `speech2text` | Speech-to-text |
+| `moderation` | Content moderation |
+| `tts` | Text-to-speech |
+| `text2img` | Text-to-image |
+| `multimodal-embedding` | Multimodal embedding |
+| `multimodal-rerank` | Multimodal reranking |
 
-#### 参数模板 (use_template)
+#### Parameter Templates (use_template)
 
-预定义的参数模板，可直接引用:
-- `temperature` - 温度参数
-- `top_p` - Top-P 采样
-- `top_k` - Top-K 采样
-- `presence_penalty` - 存在惩罚
-- `frequency_penalty` - 频率惩罚
-- `max_tokens` - 最大 Token 数
-- `response_format` - 响应格式
+Predefined parameter templates that can be directly referenced:
+- `temperature` - Temperature parameter
+- `top_p` - Top-P sampling
+- `top_k` - Top-K sampling
+- `presence_penalty` - Presence penalty
+- `frequency_penalty` - Frequency penalty
+- `max_tokens` - Maximum tokens
+- `response_format` - Response format
 - `json_schema` - JSON Schema
 
 ---
 
-### 3.3 Agent Strategy 插件声明
+### 3.3 Agent Strategy Plugin Declaration
 
 ```yaml
 agent_strategy:
   identity:
-    author: your-name           # 必需
-    name: strategy-provider     # 必需，正则: ^[a-zA-Z0-9_-]+$
+    author: your-name           # Required
+    name: strategy-provider     # Required, pattern: ^[a-zA-Z0-9_-]+$
     description:
       en_US: "Strategy provider description"
-    icon: icon.svg              # 必需
+    icon: icon.svg              # Required
     label:
       en_US: "Strategy Provider"
     tags:
       - agent
 
-  strategies:                   # 必需
+  strategies:                   # Required
     - identity:
-        author: your-name       # 必需
-        name: my-strategy       # 必需，正则: ^[a-zA-Z0-9_-]+$
+        author: your-name       # Required
+        name: my-strategy       # Required, pattern: ^[a-zA-Z0-9_-]+$
         label:
           en_US: "My Strategy"
-      description:              # 必需
+      description:              # Required
         en_US: "Strategy description"
       parameters:
         - name: model
-          type: model-selector  # 特有: array[tools] (工具选择器)
+          type: model-selector  # Special: array[tools] (tool selector)
           scope: "llm"
           required: true
           label:
@@ -589,65 +589,65 @@ agent_strategy:
             en_US: "Select a model"
           form: form
         - name: tools
-          type: array[tools]    # Agent 特有类型
+          type: array[tools]    # Agent-specific type
           required: true
           label:
             en_US: "Tools"
           human_description:
             en_US: "Select tools"
           form: form
-      output_schema:            # 可选
+      output_schema:            # Optional
         type: object
         properties:
           result:
             type: string
-      features:                 # 可选，特性列表
+      features:                 # Optional, feature list
         - streaming
 ```
 
-#### Agent 参数类型
+#### Agent Parameter Types
 
-除了通用类型外，Agent Strategy 特有:
-- `array[tools]` - 工具选择器，允许选择可用工具
+In addition to common types, Agent Strategy has:
+- `array[tools]` - Tool selector, allows selecting available tools
 
 ---
 
-### 3.4 Datasource 插件声明
+### 3.4 Datasource Plugin Declaration
 
 ```yaml
 datasource:
   identity:
-    author: your-name           # 必需
-    name: datasource-provider   # 必需
-    description:                # 必需
+    author: your-name           # Required
+    name: datasource-provider   # Required
+    description:                # Required
       en_US: "Datasource provider"
-    icon: icon.svg              # 必需
-    label:                      # 必需
+    icon: icon.svg              # Required
+    label:                      # Required
       en_US: "Datasource Provider"
     tags:
       - productivity
 
-  credentials_schema:           # 可选
+  credentials_schema:           # Optional
     - name: api_key
       type: secret-input
       required: true
       label:
         en_US: "API Key"
 
-  oauth_schema:                 # 可选
+  oauth_schema:                 # Optional
     client_schema: []
     credentials_schema: []
 
-  provider_type: website_crawl  # 必需，数据源类型
-  # 有效值: website_crawl | online_document | online_drive
+  provider_type: website_crawl  # Required, datasource type
+  # Valid values: website_crawl | online_document | online_drive
 
-  datasources:                  # 必需
+  datasources:                  # Required
     - identity:
-        author: your-name       # 必需
-        name: crawler           # 必需
+        author: your-name       # Required
+        name: crawler           # Required
         label:
           en_US: "Web Crawler"
-      parameters:               # 必需，至少一个
+      parameters:               # Required, at least one
         - name: url
           type: string          # string | number | boolean | select | secret-input
           required: true
@@ -655,49 +655,49 @@ datasource:
             en_US: "URL"
           description:
             en_US: "URL to crawl"
-      description:              # 必需
+      description:              # Required
         en_US: "Crawl a website"
-      output_schema:            # 可选
+      output_schema:            # Optional
         type: object
         properties:
           content:
             type: string
 ```
 
-#### 数据源类型 (provider_type)
+#### Datasource Types (provider_type)
 
-| 类型 | 说明 |
-|------|------|
-| `website_crawl` | 网站爬取 |
-| `online_document` | 在线文档 |
-| `online_drive` | 云盘存储 |
+| Type | Description |
+|------|-------------|
+| `website_crawl` | Website crawling |
+| `online_document` | Online document |
+| `online_drive` | Cloud storage |
 
 ---
 
-### 3.5 Trigger 插件声明
+### 3.5 Trigger Plugin Declaration
 
 ```yaml
 trigger:
   identity:
-    author: your-name           # 必需
-    name: trigger-provider      # 必需，正则: ^[a-zA-Z0-9_-]+$
+    author: your-name           # Required
+    name: trigger-provider      # Required, pattern: ^[a-zA-Z0-9_-]+$
     description:
       en_US: "Trigger provider"
-    icon: icon.svg              # 必需
-    icon_dark: icon_dark.svg    # 可选
-    label:                      # 必需
+    icon: icon.svg              # Required
+    icon_dark: icon_dark.svg    # Optional
+    label:                      # Required
       en_US: "Trigger Provider"
     tags:
       - trigger
 
-  subscription_schema:          # 必需，订阅参数
+  subscription_schema:          # Required, subscription parameters
     - name: webhook_url
       type: text-input
       required: true
       label:
         en_US: "Webhook URL"
 
-  subscription_constructor:     # 可选，订阅构造器
+  subscription_constructor:     # Optional, subscription constructor
     parameters:
       - name: event_type
         type: select
@@ -714,14 +714,14 @@ trigger:
         required: true
         label:
           en_US: "Secret"
-    oauth_schema:               # 可选
+    oauth_schema:               # Optional
       client_schema: []
       credentials_schema: []
 
-  events:                       # 可选，事件列表
+  events:                       # Optional, event list
     - identity:
-        author: your-name       # 必需
-        name: on-push           # 必需，正则: ^[a-zA-Z0-9_-]+$
+        author: your-name       # Required
+        name: on-push           # Required, pattern: ^[a-zA-Z0-9_-]+$
         label:
           en_US: "On Push"
       parameters:
@@ -730,9 +730,9 @@ trigger:
           required: false
           label:
             en_US: "Branch"
-      description:              # 必需
+      description:              # Required
         en_US: "Triggered on push event"
-      output_schema:            # 可选
+      output_schema:            # Optional
         type: object
         properties:
           commit_id:
@@ -741,33 +741,33 @@ trigger:
 
 ---
 
-### 3.6 Endpoint 插件声明
+### 3.6 Endpoint Plugin Declaration
 
 ```yaml
 endpoint:
-  settings:                     # 可选，端点配置
+  settings:                     # Optional, endpoint configuration
     - name: base_path
       type: text-input
       required: false
       label:
         en_US: "Base Path"
 
-  endpoints:                    # 端点列表
-    - path: /api/webhook        # 必需
-      method: POST              # 必需: HEAD | GET | POST | PUT | DELETE | OPTIONS
-      hidden: false             # 可选，是否隐藏
+  endpoints:                    # Endpoint list
+    - path: /api/webhook        # Required
+      method: POST              # Required: HEAD | GET | POST | PUT | DELETE | OPTIONS
+      hidden: false             # Optional, whether hidden
     - path: /api/status
       method: GET
 
-  endpoint_files:               # 可选，端点定义文件
+  endpoint_files:               # Optional, endpoint definition files
     - endpoints/webhook.yaml
 ```
 
 ---
 
-## 4. 完整示例
+## 4. Complete Examples
 
-### 4.1 Tool 插件完整示例
+### 4.1 Tool Plugin Complete Example
 
 ```yaml
 version: "1.0.0"
@@ -907,7 +907,7 @@ tool:
                   type: string
 ```
 
-### 4.2 Model 插件完整示例
+### 4.2 Model Plugin Complete Example
 
 ```yaml
 version: "1.0.0"
@@ -1008,122 +1008,122 @@ model:
 
 ---
 
-## 5. 常见错误与解决方案
+## 5. Common Errors and Solutions
 
-### 5.1 版本号错误
-
-```
-❌ 错误: version: "1"
-   信息: Field validation for 'Version' failed on the 'version' tag
-
-✅ 正确: version: "1.0.0"
-```
-
-### 5.2 名称格式错误
+### 5.1 Version Number Error
 
 ```
-❌ 错误: name: "My Plugin"
-   信息: plugin name not match regex pattern
+❌ Error: version: "1"
+   Message: Field validation for 'Version' failed on the 'version' tag
 
-✅ 正确: name: "my-plugin"
+✅ Correct: version: "1.0.0"
 ```
 
-### 5.3 缺少必需字段
+### 5.2 Name Format Error
 
 ```
-❌ 错误: label: {}
-   信息: Field validation for 'EnUS' failed on the 'required' tag
+❌ Error: name: "My Plugin"
+   Message: plugin name not match regex pattern
 
-✅ 正确:
+✅ Correct: name: "my-plugin"
+```
+
+### 5.3 Missing Required Field
+
+```
+❌ Error: label: {}
+   Message: Field validation for 'EnUS' failed on the 'required' tag
+
+✅ Correct:
    label:
      en_US: "Label"
 ```
 
-### 5.4 存储大小超限
+### 5.4 Storage Size Out of Range
 
 ```
-❌ 错误: size: 500  # 小于 1024
-   信息: Field validation for 'Size' failed on the 'min' tag
+❌ Error: size: 500  # Less than 1024
+   Message: Field validation for 'Size' failed on the 'min' tag
 
-❌ 错误: size: 2147483648  # 大于 1GB
-   信息: Field validation for 'Size' failed on the 'max' tag
+❌ Error: size: 2147483648  # Greater than 1GB
+   Message: Field validation for 'Size' failed on the 'max' tag
 
-✅ 正确: size: 1048576  # 1MB
+✅ Correct: size: 1048576  # 1MB
 ```
 
-### 5.5 类型互斥错误
+### 5.5 Type Mutual Exclusion Error
 
 ```
-❌ 错误: 同时声明 model 和 tool
-   信息: model and tool cannot be provided at the same time
+❌ Error: Declaring both model and tool
+   Message: model and tool cannot be provided at the same time
 
-✅ 正确: 只声明一种独占类型，或使用允许的组合 (tool + endpoint)
+✅ Correct: Declare only one exclusive type, or use allowed combinations (tool + endpoint)
 ```
 
-### 5.6 无效的参数类型
+### 5.6 Invalid Parameter Type
 
 ```
-❌ 错误: type: "invalid-type"
-   信息: Field validation for 'Type' failed on the 'tool_parameter_type' tag
+❌ Error: type: "invalid-type"
+   Message: Field validation for 'Type' failed on the 'tool_parameter_type' tag
 
-✅ 正确: type: "string"
+✅ Correct: type: "string"
 ```
 
-### 5.7 无效的标签
+### 5.7 Invalid Tag
 
 ```
-❌ 错误: tags: ["invalid-tag"]
-   信息: Field validation for 'Tags[0]' failed on the 'plugin_tag' tag
+❌ Error: tags: ["invalid-tag"]
+   Message: Field validation for 'Tags[0]' failed on the 'plugin_tag' tag
 
-✅ 正确: tags: ["productivity", "utilities"]
+✅ Correct: tags: ["productivity", "utilities"]
 ```
 
-### 5.8 scope 配置错误
+### 5.8 Scope Configuration Error
 
 ```
-❌ 错误:
+❌ Error:
    type: app-selector
    scope: "invalid"
-   信息: Field validation for 'Scope' failed on the 'is_scope' tag
+   Message: Field validation for 'Scope' failed on the 'is_scope' tag
 
-✅ 正确:
+✅ Correct:
    type: app-selector
-   scope: "all"  # 或 "chat", "workflow", "completion"
+   scope: "all"  # Or "chat", "workflow", "completion"
 ```
 
 ---
 
-## 附录: 验证器注册表
+## Appendix: Validator Registry
 
-所有自定义验证器列表 (定义于 `pkg/validators/`):
+All custom validators list (defined in `pkg/validators/`):
 
-| 验证器名 | 用途 |
-|---------|------|
-| `version` | 语义化版本验证 |
-| `plugin_tag` | 插件标签验证 |
-| `is_available_language` | 编程语言验证 |
-| `is_available_arch` | CPU 架构验证 |
-| `tool_identity_name` | 工具名称验证 |
-| `tool_parameter_type` | 工具参数类型验证 |
-| `tool_parameter_form` | 参数表单类型验证 |
-| `tool_provider_identity_name` | 工具提供者名称验证 |
-| `parameter_auto_generate_type` | 参数自动生成类型验证 |
-| `is_basic_type` | 基础类型验证 |
-| `model_type` | 模型类型验证 |
-| `model_provider_configurate_method` | 模型配置方法验证 |
-| `model_provider_form_type` | 模型表单类型验证 |
-| `model_parameter_type` | 模型参数类型验证 |
-| `parameter_rule` | 参数规则验证 |
-| `is_available_endpoint_method` | HTTP 方法验证 |
-| `event_parameter_type` | 事件参数类型验证 |
-| `event_identity_name` | 事件名称验证 |
-| `trigger_provider_identity_name` | 触发器提供者名称验证 |
-| `agent_strategy_parameter_type` | Agent 策略参数类型验证 |
-| `datasource_provider_type` | 数据源类型验证 |
-| `datasource_parameter_type` | 数据源参数类型验证 |
-| `credential_type` | 凭证类型验证 |
-| `is_scope` | 作用域验证 |
-| `is_app_selector_scope` | 应用选择器作用域验证 |
-| `is_model_config_scope` | 模型配置作用域验证 |
-| `is_tool_selector_scope` | 工具选择器作用域验证 |
-| `plugin_unique_identifier` | 插件唯一标识符验证 |
+| Validator Name | Purpose |
+|----------------|---------|
+| `version` | Semantic version validation |
+| `plugin_tag` | Plugin tag validation |
+| `is_available_language` | Programming language validation |
+| `is_available_arch` | CPU architecture validation |
+| `tool_identity_name` | Tool name validation |
+| `tool_parameter_type` | Tool parameter type validation |
+| `tool_parameter_form` | Parameter form type validation |
+| `tool_provider_identity_name` | Tool provider name validation |
+| `parameter_auto_generate_type` | Parameter auto-generate type validation |
+| `is_basic_type` | Basic type validation |
+| `model_type` | Model type validation |
+| `model_provider_configurate_method` | Model configuration method validation |
+| `model_provider_form_type` | Model form type validation |
+| `model_parameter_type` | Model parameter type validation |
+| `parameter_rule` | Parameter rule validation |
+| `is_available_endpoint_method` | HTTP method validation |
+| `event_parameter_type` | Event parameter type validation |
+| `event_identity_name` | Event name validation |
+| `trigger_provider_identity_name` | Trigger provider name validation |
+| `agent_strategy_parameter_type` | Agent strategy parameter type validation |
+| `datasource_provider_type` | Datasource type validation |
+| `datasource_parameter_type` | Datasource parameter type validation |
+| `credential_type` | Credential type validation |
+| `is_scope` | Scope validation |
+| `is_app_selector_scope` | App selector scope validation |
+| `is_model_config_scope` | Model config scope validation |
+| `is_tool_selector_scope` | Tool selector scope validation |
+| `plugin_unique_identifier` | Plugin unique identifier validation |
