@@ -159,6 +159,7 @@ from collections.abc import Generator
 from typing import Any
 from dify_plugin import Tool
 from dify_plugin.entities.tool import ToolInvokeMessage
+from dify_plugin.errors.tool import ToolInvokeError
 import httpx
 
 class SearchTool(Tool):
@@ -170,8 +171,7 @@ class SearchTool(Tool):
         limit = tool_parameters.get("limit", 10)
 
         if not query:
-            yield self.create_text_message("Query is required")
-            return
+            raise ValueError("Query is required")
 
         # Get credentials
         api_key = self.runtime.credentials["api_key"]
@@ -181,7 +181,7 @@ class SearchTool(Tool):
             result = self._call_api(query, limit, api_key)
             yield self.create_json_message(result)
         except httpx.HTTPError as e:
-            yield self.create_text_message(f"API error: {e}")
+            raise ToolInvokeError(f"API error: {e}")
 
     def _call_api(self, query: str, limit: int, api_key: str) -> dict:
         response = httpx.get(
@@ -341,7 +341,7 @@ yield self.create_text_message("Error: Resource not found")
 raise ValueError("Resource not found")
 ```
 
-See [best-practices.md](best-practices.md) for detailed error handling guidelines.
+See [common-issues-and-check.md](../common-issues-and-check.md) for detailed error handling guidelines.
 
 ## Best Practices
 

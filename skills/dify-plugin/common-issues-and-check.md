@@ -1,3 +1,14 @@
+## When Stuck: Where to Look
+
+| Problem | Solution |
+|---------|----------|
+| manifest.yaml validation error | [manifest.md](./implement-plugin/manifest.md) |
+| How to structure YAML files | [yaml-schemas.md](./implement-plugin/yaml-schemas.md) + [dify-official-plugins](./references/dify-official-plugins.md) |
+| Python interface/method signature | [dify-plugin-sdk](./references/dify-plugin-sdk.md) |
+| Runtime behavior, hooks | [architecture.md](./implement-plugin/architecture.md) |
+| Error handling patterns | [Error Handling](#2-error-handling) |
+| Working examples | [dify-official-plugins](./references/dify-official-plugins.md) |
+
 # Dify Plugin Development Best Practices
 
 This document summarizes common principles and pitfalls in Dify plugin development.
@@ -285,3 +296,21 @@ A: When the error is a **normal business situation**, like "no search results", 
 ### Q: What's the difference between Provider validation and Tool invocation error handling?
 
 A: Provider validation (`_validate_credentials`) failure prevents users from saving credentials. Tool invocation (`_invoke`) failure only affects a single execution. Both should raise exceptions to indicate failure.
+
+## Common Pitfalls
+
+### ❌ Don't:
+1. Use LLM calls in tools for simple data formatting
+2. Use `httpx.RequestException` (doesn't exist)
+3. Hardcode API URLs without environment selection
+4. Mix different APIs in one plugin
+5. Use invalid tags (e.g., "banking", "payments")
+6. Request unnecessary permissions (e.g., model permission when not using LLM)
+
+### ✅ Do:
+1. Return structured JSON data directly
+2. Use `httpx.HTTPError` for exception handling
+3. Support multiple environments (Sandbox/Production)
+4. Separate concerns (one plugin per API service)
+5. Use official tags (finance, utilities, productivity)
+6. Test thoroughly before release
