@@ -25,6 +25,11 @@ NC='\033[0m' # No Color
 
 RECOMMENDED_DIR="$HOME/Source/dify-dev-reference-repo"
 
+if ! command -v git &> /dev/null; then
+    echo -e "${RED}Error: git is not installed. Please install git to continue.${NC}"
+    exit 1
+fi
+
 echo "=================================================="
 echo "Dify Plugin Development - Repository Setup"
 echo "=================================================="
