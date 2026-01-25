@@ -49,11 +49,11 @@ you should refer to [init-development-environement.md](init-development-environe
 
 ### Phase 3: Implement
 
-If the plugin is not fully implemented yet, you should refer to [implement-plugin/SKILL.md](./implement-plugin/SKILL.md)
+If the plugin is not fully implemented yet, you should refer to [implement-plugin.md](implement-plugin.md)
 
 ### Phase 4: Test & Debug
 
-For testing plugin locally, refer to [test-plugin-locally/SKILL.md](./test-plugin-locally/SKILL.md)
+For testing plugin locally, refer to [testing.md](testing.md)
 For debugging plugin remotely, refer to [remote-debug-plugin.md](remote-debug-plugin.md)
 
 ### Phase 5: Package & Deploy
@@ -63,6 +63,18 @@ dify plugin package <path/to/plugin>
 ```
 
 When the plugin is ready, you may ask user to try it.
+
+### Phase 6: Iterate & Release
+
+**Dev Branch (Testing)**:
+1. Update version in `manifest.yaml` with dev suffix (e.g., `0.1.0-dev.1`)
+2. Package plugin: `dify plugin package <path/to/plugin>`
+3. Create GitHub pre-release with `.difypkg` file
+
+**Main Branch (Production)**:
+1. Update version in `manifest.yaml` with release number (e.g., `0.1.0`)
+2. Package plugin: `dify plugin package <path/to/plugin>`
+3. Create GitHub release with `.difypkg` file
 
 ### Troubleshooting
 
