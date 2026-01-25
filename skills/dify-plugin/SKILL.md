@@ -64,6 +64,18 @@ dify plugin package <path/to/plugin>
 
 When the plugin is ready, you may ask user to try it.
 
+### Phase 6: Iterate & Release
+
+**Dev Branch (Testing)**:
+1. Update version in `manifest.yaml` with dev suffix (e.g., `0.1.0-dev.1`)
+2. Package plugin: `dify plugin package <path/to/plugin>`
+3. Create GitHub pre-release with `.difypkg` file
+
+**Main Branch (Production)**:
+1. Update version in `manifest.yaml` with release number (e.g., `0.1.0`)
+2. Package plugin: `dify plugin package <path/to/plugin>`
+3. Create GitHub release with `.difypkg` file
+
 ### Troubleshooting
 
 Please refer to [common-issues-and-check.md](./common-issues-and-check.md) for a detailed troubleshooting guide.
