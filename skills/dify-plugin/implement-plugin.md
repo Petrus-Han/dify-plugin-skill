@@ -9,7 +9,7 @@ Use this guide after the plugin plan and local environment are ready. It links t
 3. [credentials.md](references/credentials.md) - credential schema and validation rules
 4. [yaml-schemas.md](references/yaml-schemas.md) - YAML patterns for credentials/params
 5. [security.md](references/security.md) - baseline security checklist
-5. Category guide that matches your plugin type:
+6. Category guide that matches your plugin type:
    - [tool-plugin.md](plugin-guide-by-category/tool-plugin.md)
    - [model-plugin.md](plugin-guide-by-category/model-plugin.md)
    - [trigger-plugin.md](plugin-guide-by-category/trigger-plugin.md)
