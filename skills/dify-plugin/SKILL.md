@@ -49,11 +49,11 @@ you should refer to [init-development-environement.md](init-development-environe
 
 ### Phase 3: Implement
 
-If the plugin is not fully implemented yet, you should refer to [implement-plugin/SKILL.md](./implement-plugin/SKILL.md)
+If the plugin is not fully implemented yet, you should refer to [implement-plugin.md](implement-plugin.md)
 
 ### Phase 4: Test & Debug
 
-For testing plugin locally, refer to [test-plugin-locally/SKILL.md](./test-plugin-locally/SKILL.md)
+For testing plugin locally, refer to [testing.md](testing.md)
 For debugging plugin remotely, refer to [remote-debug-plugin.md](remote-debug-plugin.md)
 
 ### Phase 5: Package & Deploy

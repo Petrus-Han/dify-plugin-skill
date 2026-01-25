@@ -13,7 +13,7 @@ The following command will start a plugin in standard I/O (stdio) mode with JSON
 dify plugin run plugin.difypkg -m stdio -r json
 ```
 
-For testing purposes, please see [code-examples.md](./code-examples.md).
+For testing purposes, please see [code-examples.md](references/local-testing/code-examples.md).
 
 ## Dify CLI Syntax
 
@@ -32,8 +32,8 @@ dify plugin run <plugin.difypkg> [options]
 ### Interaction
 
 The plugin will wait for stdin and respond with stdout.
-The interaction format is available in [protocol-spec.md](./protocol-spec.md).
+The interaction format is available in [protocol-spec.md](references/local-testing/protocol-spec.md).
 
 ## Troubleshooting
 
-For common issues and solutions, please refer to [troubleshooting.md](./troubleshooting.md).
+For common issues and solutions, please refer to [troubleshooting.md](references/local-testing/troubleshooting.md).
