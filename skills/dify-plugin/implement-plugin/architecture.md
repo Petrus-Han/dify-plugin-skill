@@ -832,12 +832,12 @@ For development guides, directory structures, YAML configuration, and Python imp
 
 | Plugin Type | Purpose | Development Guide | Declaration Definition |
 |-------------|---------|-------------------|------------------------|
-| Tool | Tool functions for Agent/workflow invocation | [tool-plugin.md](tool-plugin.md) | `tool_declaration.go` |
-| Model | AI model providers (LLM, Embedding, etc.) | [model-plugin.md](model-plugin.md) | `model_declaration.go` |
-| Agent Strategy | Agent reasoning strategies | [agent-strategy-plugin.md](agent-strategy-plugin.md) | `agent_declaration.go` |
-| Datasource | Data source connections (cloud drive, documents, etc.) | [datasource-plugin.md](datasource-plugin.md) | `datasource_declaration.go` |
-| Trigger | Webhook event triggers | [trigger-plugin.md](trigger-plugin.md) | `trigger_declaration.go` |
-| Extension | HTTP endpoint extensions | [extension-plugin.md](extension-plugin.md) | `endpoint_declaration.go` |
+| Tool | Tool functions for Agent/workflow invocation | [tool-plugin.md](../plugin-guide-by-category/tool-plugin.md) | `tool_declaration.go` |
+| Model | AI model providers (LLM, Embedding, etc.) | [model-plugin.md](../plugin-guide-by-category/model-plugin.md) | `model_declaration.go` |
+| Agent Strategy | Agent reasoning strategies | [agent-strategy-plugin.md](../plugin-guide-by-category/agent-strategy-plugin.md) | `agent_declaration.go` |
+| Datasource | Data source connections (cloud drive, documents, etc.) | [datasource-plugin.md](../plugin-guide-by-category/datasource-plugin.md) | `datasource_declaration.go` |
+| Trigger | Webhook event triggers | [trigger-plugin.md](../plugin-guide-by-category/trigger-plugin.md) | `trigger_declaration.go` |
+| Extension | HTTP endpoint extensions | [extension-plugin.md](../plugin-guide-by-category/extension-plugin.md) | `endpoint_declaration.go` |
 
 Declaration definition files are located in the `pkg/entities/plugin_entities/` directory.
 
