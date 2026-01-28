@@ -59,8 +59,14 @@ For debugging plugin remotely, refer to [remote-debug-plugin.md](remote-debug-pl
 ### Phase 5: Package & Deploy
 
 ```bash
+# Package the plugin
 dify plugin package <path/to/plugin>
+
+# Install to Dify instance (uses .credential from get_debug_key.py)
+uv run python scripts/install_plugin.py dist/*.difypkg
 ```
+
+The `install_plugin.py` script uploads and installs plugins via Dify API. It reuses the `.credential` file created by `get_debug_key.py`.
 
 When the plugin is ready, you may ask user to try it.
 
