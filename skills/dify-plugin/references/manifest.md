@@ -85,7 +85,27 @@ endpoint: ...                  # Endpoint plugin declaration
 
 ## 2. Field Validation Rules
 
-### 2.1 Version (version)
+### 2.1 Version Fields
+
+There are **two version fields** in manifest.yaml with different purposes:
+
+| Field | Location | Purpose | Update Frequency |
+|-------|----------|---------|------------------|
+| `version` | Top-level | **Plugin version** - The release version users see | Update on each release |
+| `meta.version` | Under `meta:` | **Schema version** - Internal metadata version | Keep at `0.0.1` (rarely changed) |
+
+**Important**: Based on analysis of 135+ official Dify plugins:
+- `version` (top-level): Varies (0.0.1 ~ 1.0.1+), updated with each plugin release
+- `meta.version`: **Always `0.0.1`** in official plugins, should remain unchanged
+
+**Example**:
+```yaml
+version: 0.2.6          # Plugin version - increment on release
+meta:
+  version: 0.0.1        # Schema version - keep as 0.0.1
+```
+
+#### Version Format
 
 **Pattern**: `^\d{1,4}(\.\d{1,4}){2}(-\w{1,16})?$`
 
@@ -160,7 +180,7 @@ icon_dark: icon_dark.svg       # Optional, dark theme icon
 
 ```yaml
 meta:
-  version: "0.0.1"             # Required, semantic version
+  version: "0.0.1"             # Required, keep as 0.0.1 (schema version, not plugin version)
   arch:                        # Required, supported architectures
     - amd64                    # x86_64 architecture
     - arm64                    # ARM64 architecture
@@ -170,6 +190,8 @@ meta:
     entrypoint: main           # Required, entry module, max 256 characters
   minimum_dify_version: "0.8.0" # Optional, minimum Dify version
 ```
+
+> **Note**: `meta.version` should always be `0.0.1`. Do not increment this when releasing new plugin versions. Only increment the top-level `version` field.
 
 **Supported Architectures**:
 - `amd64` - x86_64 architecture
@@ -785,7 +807,7 @@ icon_dark: icon_dark.svg
 created_at: 2024-01-01T00:00:00Z
 
 meta:
-  version: "1.0.0"
+  version: "0.0.1"
   arch:
     - amd64
     - arm64
@@ -924,7 +946,7 @@ icon: icon.svg
 created_at: 2024-01-01T00:00:00Z
 
 meta:
-  version: "1.0.0"
+  version: "0.0.1"
   arch:
     - amd64
     - arm64
