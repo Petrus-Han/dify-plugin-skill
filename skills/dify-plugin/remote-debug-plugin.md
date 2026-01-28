@@ -217,7 +217,7 @@ Check required fields:
 - Verify `REMOTE_INSTALL_KEY` is correct
 - Check Dify version compatibility (requires 1.10+)
 
-## Packaging
+## Packaging & Installation
 
 ```bash
 # Package plugin
@@ -226,9 +226,35 @@ dify plugin package ./my-plugin
 # Verify package
 dify plugin checksum ./my-plugin.difypkg
 
-# Run packaged plugin (for testing)
+# Run packaged plugin (for local testing)
 dify plugin run ./my-plugin.difypkg
+
+# Install to Dify instance via API
+uv run python scripts/install_plugin.py ./my-plugin.difypkg
 ```
+
+### Install Plugin Script
+
+The `install_plugin.py` script uploads and installs `.difypkg` files to a Dify instance via API.
+
+**Prerequisites:**
+- `.credential` file with Dify login credentials (created by `get_debug_key.py`)
+
+**Usage:**
+```bash
+# Install single plugin
+uv run python scripts/install_plugin.py dist/my-plugin.difypkg
+
+# Install multiple plugins
+uv run python scripts/install_plugin.py dist/*.difypkg
+```
+
+**What the script does:**
+1. Login: `POST {host}/console/api/login`
+2. Upload: `POST {host}/console/api/workspaces/current/plugin/upload/pkg`
+3. Install: `POST {host}/console/api/workspaces/current/plugin/install/pkg`
+
+Script location: [scripts/install_plugin.py](scripts/install_plugin.py)
 
 ## Deployment Options
 
