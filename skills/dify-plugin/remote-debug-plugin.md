@@ -217,7 +217,73 @@ Check required fields:
 - Verify `REMOTE_INSTALL_KEY` is correct
 - Check Dify version compatibility (requires 1.10+)
 
-## Packaging & Installation
+## Remote Debugging vs Remote Installation
+
+There are two ways to test plugins on a remote Dify instance:
+
+| Method | Script | Use Case | Plugin State |
+|--------|--------|----------|--------------|
+| **Remote Debugging** | `debug.sh` | Active development, live code changes | Temporary (disappears when debug stops) |
+| **Remote Installation** | `install_plugin.py` | Testing packaged plugin, sharing with team | Persistent (stays until uninstalled) |
+
+### Remote Debugging (Development)
+
+Use this when actively developing and testing code changes.
+
+```bash
+# Start debug session (from plugin directory)
+./scripts/debug.sh
+
+# Or manually
+uv run python -m main
+```
+
+**Characteristics:**
+- Plugin runs from your local source code
+- Changes take effect immediately after restart
+- Plugin disappears when debug process stops
+- Shows as `[DEBUG]` in Dify UI (if using build_mode.py)
+
+Script location: [scripts/debug.sh](scripts/debug.sh)
+
+### Remote Installation (Persistent)
+
+Use this when you want to install a packaged plugin for testing or sharing.
+
+```bash
+# 1. Package plugin
+dify plugin package ./my-plugin
+
+# 2. Install to Dify instance
+uv run python scripts/install_plugin.py ./my-plugin.difypkg
+```
+
+**Characteristics:**
+- Plugin is packaged and uploaded to Dify
+- Stays installed until manually uninstalled
+- Same as production deployment
+- Can install multiple plugins at once
+
+**Usage:**
+```bash
+# Install single plugin
+uv run python scripts/install_plugin.py my-plugin.difypkg
+
+# Install multiple plugins
+uv run python scripts/install_plugin.py *.difypkg
+```
+
+**What the script does:**
+1. Login: `POST {host}/console/api/login`
+2. Upload: `POST {host}/console/api/workspaces/current/plugin/upload/pkg`
+3. Install: `POST {host}/console/api/workspaces/current/plugin/install/pkg`
+
+**Prerequisites:**
+- `.credential` file with Dify login credentials (created by `get_debug_key.py`)
+
+Script location: [scripts/install_plugin.py](scripts/install_plugin.py)
+
+## Packaging
 
 ```bash
 # Package plugin
@@ -226,41 +292,16 @@ dify plugin package ./my-plugin
 # Verify package
 dify plugin checksum ./my-plugin.difypkg
 
-# Run packaged plugin (for local testing)
+# Run packaged plugin locally (without Dify)
 dify plugin run ./my-plugin.difypkg
-
-# Install to Dify instance via API
-uv run python scripts/install_plugin.py ./my-plugin.difypkg
 ```
-
-### Install Plugin Script
-
-The `install_plugin.py` script uploads and installs `.difypkg` files to a Dify instance via API.
-
-**Prerequisites:**
-- `.credential` file with Dify login credentials (created by `get_debug_key.py`)
-
-**Usage:**
-```bash
-# Install single plugin
-uv run python scripts/install_plugin.py dist/my-plugin.difypkg
-
-# Install multiple plugins
-uv run python scripts/install_plugin.py dist/*.difypkg
-```
-
-**What the script does:**
-1. Login: `POST {host}/console/api/login`
-2. Upload: `POST {host}/console/api/workspaces/current/plugin/upload/pkg`
-3. Install: `POST {host}/console/api/workspaces/current/plugin/install/pkg`
-
-Script location: [scripts/install_plugin.py](scripts/install_plugin.py)
 
 ## Deployment Options
 
 | Method                 | Description                              |
 | ---------------------- | ---------------------------------------- |
-| **Remote Debug**       | Development, connects to Dify instance   |
+| **Remote Debug**       | Development, live code changes           |
+| **Remote Install**     | Testing packaged plugin on remote Dify   |
 | **Plugin Marketplace** | Upload .difypkg to marketplace           |
 | **Self-hosted**        | Deploy alongside Dify with plugin daemon |
 
