@@ -9,7 +9,8 @@ Use this guide after the plugin plan and local environment are ready. It links t
 3. [credentials.md](references/credentials.md) - credential schema and validation rules
 4. [yaml-schemas.md](references/yaml-schemas.md) - YAML patterns for credentials/params
 5. [security.md](references/security.md) - baseline security checklist
-6. Category guide that matches your plugin type:
+6. [logging.md](references/logging.md) - logging for debugging and production
+7. Category guide that matches your plugin type:
    - [tool-plugin.md](plugin-guide-by-category/tool-plugin.md)
    - [model-plugin.md](plugin-guide-by-category/model-plugin.md)
    - [trigger-plugin.md](plugin-guide-by-category/trigger-plugin.md)
@@ -27,7 +28,12 @@ Use this guide after the plugin plan and local environment are ready. It links t
    - Place files in the directory structure for your category guide
 4. Implement provider validation and runtime logic in `provider/*.py`.
 5. Implement tool/event/model/datasource/endpoint code in its directory.
-6. Validate error handling style with [common-issues-and-check.md](common-issues-and-check.md).
+6. Add logging using [logging.md](references/logging.md):
+   - Configure `plugin_logger_handler` in each Python file
+   - Log key operations at INFO level
+   - Log errors with context using `logger.exception()`
+   - Ensure no sensitive data in logs (API keys, passwords, PII)
+7. Validate error handling and logging with [common-issues-and-check.md](common-issues-and-check.md).
 
 ## Reference Repos (When You Need Examples)
 
