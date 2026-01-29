@@ -20,6 +20,7 @@ This document summarizes common principles and pitfalls in Dify plugin developme
 3. [HTTP Requests](#3-http-requests)
 4. [Message Returns](#4-message-returns)
 5. [Performance & Resources](#5-performance--resources)
+6. [Logging](#6-logging)
 
 ---
 
@@ -283,6 +284,66 @@ resource:
 
 ---
 
+## 6. Logging
+
+For complete logging documentation, see [logging.md](references/logging.md).
+
+### 6.1 Required Setup
+
+Every Python file with business logic must configure logging with DEBUG mode control:
+
+```python
+import os
+import logging
+from dify_plugin.config.logger_format import plugin_logger_handler
+
+DEBUG_MODE = os.getenv("DEBUG", "false").lower() == "true"
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG if DEBUG_MODE else logging.INFO)
+logger.addHandler(plugin_logger_handler)
+```
+
+### 6.2 Debug vs Production Logging
+
+| Mode | What to Log | What NOT to Log |
+|------|-------------|-----------------|
+| **Debug** (`DEBUG=true`) | Verbose info, masked params, response structure | Still no raw credentials |
+| **Production** (`DEBUG=false`) | Key operations, errors, status codes | **NEVER: credentials, PII, request/response bodies** |
+
+### 6.3 Security: Never Log Sensitive Data in Production
+
+> **CRITICAL**: Production log violations are security incidents.
+
+```python
+# ❌ FORBIDDEN in production
+logger.info(f"API key: {api_key}")
+logger.info(f"Headers: {headers}")
+logger.info(f"User email: {user_email}")
+logger.info(f"Request body: {body}")
+logger.info(f"Response: {response.text}")
+
+# ✅ SAFE for production
+logger.info("API key configured: yes")
+logger.info(f"Calling: {url}")
+logger.info(f"Response status: {status_code}")
+logger.info(f"Processing request (user_id={user_id})")
+
+# ✅ SAFE - verbose logging in debug mode only
+if DEBUG_MODE:
+    logger.debug(f"Params: {safe_log_params(params)}")
+    logger.debug(f"Response keys: {list(result.keys())}")
+```
+
+### 6.4 Log Destinations
+
+| Environment | Where Logs Appear |
+|-------------|-------------------|
+| Remote Debug | Terminal running `python -m main` |
+| Production | Plugin daemon container logs |
+
+---
+
 ## Appendix: FAQ
 
 ### Q: Why does API return error but execution status is SUCCESS?
@@ -306,6 +367,8 @@ A: Provider validation (`_validate_credentials`) failure prevents users from sav
 4. Mix different APIs in one plugin
 5. Use invalid tags (e.g., "banking", "payments")
 6. Request unnecessary permissions (e.g., model permission when not using LLM)
+7. Log sensitive data (API keys, passwords, tokens, PII)
+8. Use `print()` for logging - use proper logger instead
 
 ### ✅ Do:
 1. Return structured JSON data directly
@@ -314,3 +377,5 @@ A: Provider validation (`_validate_credentials`) failure prevents users from sav
 4. Separate concerns (one plugin per API service)
 5. Use official tags (finance, utilities, productivity)
 6. Test thoroughly before release
+7. Use `plugin_logger_handler` for all logging
+8. Log errors with context using `logger.exception()`
