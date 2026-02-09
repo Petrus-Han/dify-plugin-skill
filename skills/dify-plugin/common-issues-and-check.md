@@ -369,6 +369,8 @@ A: Provider validation (`_validate_credentials`) failure prevents users from sav
 6. Request unnecessary permissions (e.g., model permission when not using LLM)
 7. Log sensitive data (API keys, passwords, tokens, PII)
 8. Use `print()` for logging - use proper logger instead
+9. Only check `manifest.yaml` for `[DEBUG]` labels before release — also check `provider/*.yaml`
+10. Call `response.raise_for_status()` in `_oauth_refresh_credentials` without first checking for `invalid_grant`
 
 ### ✅ Do:
 1. Return structured JSON data directly
@@ -379,3 +381,49 @@ A: Provider validation (`_validate_credentials`) failure prevents users from sav
 6. Test thoroughly before release
 7. Use `plugin_logger_handler` for all logging
 8. Log errors with context using `logger.exception()`
+9. Run `grep -r "\[DEBUG\]" --include="*.yaml" .` before packaging to catch stale debug labels
+10. Handle OAuth `invalid_grant` errors explicitly to prompt users to re-authorize
+
+---
+
+## OAuth Token Refresh Best Practices
+
+### Handle Refresh Token Expiration
+
+When implementing `_oauth_refresh_credentials`, always check for `invalid_grant` before calling `raise_for_status()`. OAuth providers return HTTP 400 with `"error": "invalid_grant"` when the refresh token has expired or been revoked. Without explicit handling, users see a generic error instead of a clear re-authorization prompt.
+
+```python
+def _oauth_refresh_credentials(self, redirect_uri, system_credentials, credentials):
+    refresh_token = credentials.get("refresh_token")
+    if not refresh_token:
+        raise ToolProviderOAuthError("No refresh token available")
+
+    response = httpx.post(self._TOKEN_URL, data=data, auth=auth, timeout=30)
+
+    # Check for refresh token expiration BEFORE raise_for_status
+    if response.status_code == 400:
+        try:
+            error_json = response.json()
+        except Exception:
+            error_json = {}
+        if error_json.get("error") == "invalid_grant":
+            raise ToolProviderOAuthError(
+                "Refresh token has expired or been revoked. "
+                "Please re-authorize the connection."
+            )
+        raise ToolProviderOAuthError(
+            f"Failed to refresh token: {error_json.get('error_description', response.text)}"
+        )
+
+    response.raise_for_status()
+    # ... process new tokens
+```
+
+### Common Refresh Token Lifetimes
+
+| Provider | Refresh Token Lifetime |
+|----------|----------------------|
+| QuickBooks Online | 100 days |
+| Google (Gmail, Drive, Calendar) | 6 months (if unused) |
+| Mercury | Varies |
+| Spotify | Does not expire (but can be revoked) |

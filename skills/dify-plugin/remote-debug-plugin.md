@@ -285,6 +285,24 @@ Script location: [scripts/install_plugin.py](scripts/install_plugin.py)
 
 ## Packaging
 
+### Build Mode (Debug vs Release Labels)
+
+Plugins may use `[DEBUG]` suffix in YAML labels to distinguish debug builds in the Dify UI. Before packaging for release, ensure all debug labels are removed.
+
+**Important**: `[DEBUG]` labels can appear in both `manifest.yaml` and `provider/*.yaml` files. A common mistake is only cleaning `manifest.yaml` while leaving `[DEBUG]` tags in provider identity labels — these will still show in the Dify plugin UI.
+
+Files to check for `[DEBUG]` labels:
+- `manifest.yaml` — top-level `label:` block
+- `provider/*.yaml` — `identity.label:` block
+
+Quick check before packaging:
+```bash
+# Scan for any remaining [DEBUG] labels
+grep -r "\[DEBUG\]" --include="*.yaml" ./my-plugin/
+```
+
+### Package Commands
+
 ```bash
 # Package plugin
 dify plugin package ./my-plugin
