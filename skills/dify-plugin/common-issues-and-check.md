@@ -21,6 +21,8 @@ This document summarizes common principles and pitfalls in Dify plugin developme
 4. [Message Returns](#4-message-returns)
 5. [Performance & Resources](#5-performance--resources)
 6. [Logging](#6-logging)
+7. [Packaging & Security Lessons Learned](#packaging--security-lessons-learned)
+8. [OAuth Token Refresh Best Practices](#oauth-token-refresh-best-practices)
 
 ---
 
@@ -371,6 +373,9 @@ A: Provider validation (`_validate_credentials`) failure prevents users from sav
 8. Use `print()` for logging - use proper logger instead
 9. Only check `manifest.yaml` for `[DEBUG]` labels before release — also check `provider/*.yaml`
 10. Call `response.raise_for_status()` in `_oauth_refresh_credentials` without first checking for `invalid_grant`
+11. Commit `.difypkg` files to the plugin source repo — distribute via GitHub Releases or Marketplace PRs
+12. Assume `.gitignore` only needs `.credentials` — Dify debug tooling also creates `.credential` (singular) and `.debug.pid`
+13. Write README from a developer perspective — README is for end users installing in Dify, not for contributors
 
 ### ✅ Do:
 1. Return structured JSON data directly
@@ -383,6 +388,113 @@ A: Provider validation (`_validate_credentials`) failure prevents users from sav
 8. Log errors with context using `logger.exception()`
 9. Run `grep -r "\[DEBUG\]" --include="*.yaml" .` before packaging to catch stale debug labels
 10. Handle OAuth `invalid_grant` errors explicitly to prompt users to re-authorize
+11. Verify `.difypkg` contents with zip inspection before distributing (check for `.credentials`, `.credential`, `.debug.pid`, `.env`)
+12. Run `scripts/pre-check-marketplace.sh` before submitting Marketplace PRs
+13. Write README from user perspective: Setup → Tools list → Usage notes (see [README Writing Style](publish-plugin.md#readme-writing-style))
+
+---
+
+## Packaging & Security Lessons Learned
+
+### .difypkg Packaging Pitfalls
+
+The `dify plugin package` command creates a `.difypkg` file (which is a zip archive). **It respects `.gitignore`** — if your `.gitignore` is incomplete, sensitive files get baked into the package.
+
+#### Critical: `.credentials` vs `.credential`
+
+Dify debug tooling (`get_debug_key.py`) creates **both** `.credentials` and `.credential` files. These contain your Dify platform login credentials (email + password). You **must** exclude both:
+
+```gitignore
+# BOTH filenames are created by Dify debug tooling
+.credentials
+.credential
+.debug.pid
+debug.log
+```
+
+Missing either one means your Dify platform credentials get packaged into every `.difypkg` you distribute.
+
+#### Always Verify Package Contents Before Distribution
+
+After packaging, verify no sensitive files leaked into the `.difypkg`:
+
+```bash
+# List all files in the package
+python3 -c "
+import zipfile, sys
+with zipfile.ZipFile(sys.argv[1]) as z:
+    for f in z.namelist():
+        print(f)
+" my-plugin.difypkg
+
+# Check for known sensitive files
+python3 -c "
+import zipfile, sys
+SENSITIVE = ['.credentials', '.credential', '.debug.pid', '.env', 'debug.log']
+with zipfile.ZipFile(sys.argv[1]) as z:
+    leaked = [f for f in z.namelist() if any(f.endswith(s) for s in SENSITIVE)]
+    if leaked:
+        print('LEAKED FILES:', leaked)
+        sys.exit(1)
+    else:
+        print('Clean — no sensitive files found')
+" my-plugin.difypkg
+```
+
+#### Never Commit .difypkg to Source Repos
+
+`.difypkg` files should **never** be committed to your plugin source repository:
+- They bloat the repo with binary files
+- If they contain leaked credentials, the leak persists in git history even after file deletion
+- Use `dist/` directory + `.gitignore` exclusion for local builds
+- Distribute via GitHub Releases or Marketplace PRs, not source repo commits
+
+```gitignore
+# In root .gitignore of your plugin project
+dist/
+*.difypkg
+```
+
+#### Cleaning Leaked Files from Git History
+
+If sensitive files were committed to git history, simply deleting them is **not enough** — they remain in every old commit. Use `git filter-repo` for full cleanup:
+
+```bash
+# Install git-filter-repo
+pip install git-filter-repo
+
+# Clone a mirror (bare repo)
+git clone --mirror <repo-url> /tmp/repo-mirror
+cd /tmp/repo-mirror
+
+# Remove specific files from ALL history
+git filter-repo --invert-paths \
+  --path-glob '*.difypkg' \
+  --path '.credentials' \
+  --path '.credential' \
+  --force
+
+# Force-push all branches (requires temporarily disabling branch protection)
+git push --force --all
+git push --force --tags
+```
+
+**After cleanup**: Rotate all leaked credentials immediately. The old values may still exist in GitHub caches, forks, or CI logs.
+
+### Pre-Packaging Checklist
+
+Before running `dify plugin package`:
+
+- [ ] `.gitignore` includes `.credentials`, `.credential`, `.debug.pid`, `debug.log`
+- [ ] No `[DEBUG]` labels in `manifest.yaml` or `provider/*.yaml`
+- [ ] No hardcoded credentials in source code
+- [ ] `requirements.txt` exists with `dify-plugin>=0.5.0`
+- [ ] README.md is user-facing (see [README Writing Style](publish-plugin.md#readme-writing-style))
+
+After packaging:
+
+- [ ] Verify package contents with the zip inspection commands above
+- [ ] No sensitive files in the package
 
 ---
 
