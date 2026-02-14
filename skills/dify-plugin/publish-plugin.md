@@ -13,7 +13,7 @@ Use `AskUserQuestion` to let the user choose before proceeding.
 
 The Marketplace uses a GitHub-based workflow: push to main → GitHub Actions packages the plugin → auto-creates a PR to `langgenius/dify-plugins`.
 
-Reference: https://docs.dify.ai/zh/develop-plugin/publishing/marketplace-listing/plugin-auto-publish-pr
+Reference: https://docs.dify.ai/plugins/publish-plugins/publish-to-dify-marketplace
 
 ### Prerequisites
 
@@ -25,19 +25,13 @@ Reference: https://docs.dify.ai/zh/develop-plugin/publishing/marketplace-listing
 
 ### Setup: Add GitHub Actions Workflow
 
-Copy the workflow template from [`scripts/plugin-publish.yml`](scripts/plugin-publish.yml) to the plugin source repo:
+Copy the workflow template from [`scripts/plugin-publish.yml`](scripts/plugin-publish.yml) to the plugin source repo at `.github/workflows/plugin-publish.yml`.
 
-```bash
-# From the plugin source repo root
-mkdir -p .github/workflows
-cp <skill-dir>/scripts/plugin-publish.yml .github/workflows/plugin-publish.yml
-```
-
-The workflow file is at: `scripts/plugin-publish.yml`
+Use the `Read` tool to read `scripts/plugin-publish.yml` from this skill directory, then use the `Write` tool to create `.github/workflows/plugin-publish.yml` in the plugin repo.
 
 What it does on each push to `main`:
-1. Downloads the latest Dify CLI
-2. Reads `name`, `version`, `author` from `manifest.yaml`
+1. Downloads the pinned version of Dify CLI (update `DIFY_CLI_VERSION` env var as needed)
+2. Reads `name`, `version`, `author` from `manifest.yaml` using `yq`
 3. Packages the plugin as `{name}-{version}.difypkg`
 4. Checks out `{author}/dify-plugins` fork
 5. Copies the `.difypkg` into `{author}/{plugin-name}/` directory
@@ -49,7 +43,7 @@ What it does on each push to `main`:
 1. Bump `version` in `manifest.yaml` (e.g., `0.0.1` → `0.0.2`)
 2. Commit and push to `main` branch
 3. GitHub Actions automatically:
-   - Downloads latest Dify CLI
+   - Downloads pinned Dify CLI
    - Packages the plugin as `{name}-{version}.difypkg`
    - Pushes to `{author}/dify-plugins` fork, branch `bump-{name}-plugin-{version}`
    - Creates PR to `langgenius/dify-plugins`
