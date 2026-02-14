@@ -53,18 +53,89 @@ What it does on each push to `main`:
 
 ```yaml
 version: 0.0.2          # Bump this each release (semver)
-author: your-github-id  # Must match your GitHub username and fork path
+author: your-github-id  # Must NOT be "langgenius" or "dify"
 name: your-plugin-name  # Determines package name and directory
+icon: icon.svg          # Must exist at _assets/icon.svg
+```
+
+### Marketplace CI Checks (`pre-check-plugin`)
+
+The `langgenius/dify-plugins` repo runs automated CI on every PR. All checks must pass before merge:
+
+| Check | What It Validates |
+|-------|-------------------|
+| **Single .difypkg** | Only ONE `.difypkg` file change per PR |
+| **PR language** | PR title/body must not contain CJK characters |
+| **Project structure** | Must include `README.md` and `PRIVACY.md` in plugin root |
+| **Manifest** | `author` must not be `langgenius` or `dify` |
+| **Icon** | Icon file must exist at `_assets/{icon}`, must not be default template or contain `DIFY_MARKETPLACE_TEMPLATE_ICON_DO_NOT_USE` |
+| **Version** | Version must not already exist in marketplace (`marketplace.dify.ai/api/v1/plugins/{author}/{name}/{version}`) |
+| **README language** | `README.md` must not contain Chinese characters (use multilingual README for i18n) |
+| **PRIVACY.md** | `PRIVACY.md` must exist in plugin root |
+| **Dependencies** | `requirements.txt` must install cleanly (Python 3.12) |
+| **dify_plugin version** | `dify_plugin >= 0.5.0` required |
+| **Install Test** | Plugin must pass install test via `dify-plugin-daemon` |
+| **Packaging** | Plugin must pass marketplace toolkit packaging validation |
+
+### Required Files for Marketplace
+
+Every plugin **must** include these files in the plugin root (they get packaged into the `.difypkg`):
+
+- **`README.md`** — Plugin description, usage, configuration. Must be in **English** (no Chinese). For multilingual support, see [multilingual README docs](https://docs.dify.ai/en/develop-plugin/features-and-specs/plugin-types/multilingual-readme#multilingual-readme).
+- **`PRIVACY.md`** — Privacy policy describing what data the plugin collects, stores, and transmits.
+- **`_assets/icon.svg`** — Custom icon (not default template).
+
+After merge, `upload-merged-plugin` workflow automatically uploads the `.difypkg` to the Dify Marketplace.
+
+**First-time fork contributors**: CI requires maintainer approval before running (GitHub security policy). The Dify team will approve the workflow run from the Actions tab.
+
+### Manual Publishing (without Auto-PR workflow)
+
+If the auto-PR workflow is not set up, you can publish manually:
+
+```bash
+# 1. Package the plugin
+dify plugin package <path/to/plugin> -o <name>-<version>.difypkg
+
+# 2. Clone your fork of langgenius/dify-plugins
+git clone https://github.com/<your-fork>/dify-plugins.git /tmp/dify-plugins
+cd /tmp/dify-plugins
+
+# 3. Sync fork with upstream
+git remote add upstream https://github.com/langgenius/dify-plugins.git
+git fetch upstream main && git reset --hard upstream/main
+
+# 4. Create branch, copy package, push
+git checkout -b bump-<name>-plugin-<version>
+mkdir -p <author>/<name>
+cp <name>-<version>.difypkg <author>/<name>/
+git add . && git commit -m "bump <name> plugin to version <version>"
+git push -u origin bump-<name>-plugin-<version>
+
+# 5. Create PR (one PR per plugin)
+gh pr create \
+  --repo langgenius/dify-plugins \
+  --head "<fork-owner>:bump-<name>-plugin-<version>" \
+  --base main \
+  --title "bump <name> plugin to version <version>" \
+  --body "bump <name> plugin package to version <version>"
 ```
 
 ### Checklist Before Publishing
 
 - [ ] Version bumped in `manifest.yaml`
+- [ ] `author` is not `langgenius` or `dify`
+- [ ] Custom icon at `_assets/icon.svg` (not default template)
+- [ ] `README.md` exists in plugin root (English only, no CJK characters)
+- [ ] `PRIVACY.md` exists in plugin root
+- [ ] Version does not already exist in marketplace
 - [ ] No `.venv`/`venv`/`__pycache__` directories (use `.gitignore`)
 - [ ] No hardcoded credentials or secrets
 - [ ] Plugin packages successfully: `dify plugin package .`
 - [ ] Plugin tested on a real Dify instance
-- [ ] `PLUGIN_ACTION` secret configured with valid PAT
+- [ ] Only ONE `.difypkg` file changed per PR
+- [ ] PR title/body in English (no CJK characters)
+- [ ] `PLUGIN_ACTION` secret configured with valid PAT (if using auto-PR)
 - [ ] `{author}/dify-plugins` fork exists and is up to date
 
 ---
