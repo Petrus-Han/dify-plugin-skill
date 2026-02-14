@@ -89,6 +89,32 @@ After merge, `upload-merged-plugin` workflow automatically uploads the `.difypkg
 
 **First-time fork contributors**: CI requires maintainer approval before running (GitHub security policy). The Dify team will approve the workflow run from the Actions tab.
 
+### PR Review & Fix Loop (SOP)
+
+After creating a PR, follow this loop until CI passes and the PR is approved:
+
+1. **Submit PR** — Create PR to `langgenius/dify-plugins`
+2. **Wait for CI** — Check CI status with `gh pr checks <PR#> --repo langgenius/dify-plugins`. For first-time forks, CI needs maintainer approval (`action_required`).
+3. **Read CI results** — If CI fails, read the workflow run logs:
+   ```bash
+   gh run view <run-id> --repo langgenius/dify-plugins --log-failed
+   ```
+4. **Fix issues** — Address each failing check:
+   - Missing `README.md` / `PRIVACY.md` → Add the files to the plugin, repackage
+   - CJK in README → Rewrite in English
+   - Icon validation → Replace with custom icon
+   - Version exists → Bump version in `manifest.yaml`
+   - Install test failed → Debug the plugin startup (check `main.py`, imports, dependencies)
+   - Packaging failed → Ensure `dify plugin package .` succeeds locally
+5. **Repackage & re-push** — After fixing:
+   ```bash
+   dify plugin package <plugin> -o <name>-<version>.difypkg
+   # Copy to fork branch, commit, push (triggers CI re-run via `synchronize` event)
+   ```
+6. **Repeat** until all checks pass
+
+**Important**: Each push to the fork branch triggers a new CI run. For fork PRs, each `synchronize` event may again require maintainer approval.
+
 ### Manual Publishing (without Auto-PR workflow)
 
 If the auto-PR workflow is not set up, you can publish manually:
