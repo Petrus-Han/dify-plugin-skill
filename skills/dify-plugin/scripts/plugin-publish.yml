@@ -21,14 +21,9 @@ jobs:
       - name: Get basic info from manifest
         id: get_basic_info
         run: |
-          PLUGIN_NAME=$(grep "^name:" manifest.yaml | cut -d' ' -f2)
-          echo "plugin_name=$PLUGIN_NAME" >> $GITHUB_OUTPUT
-
-          VERSION=$(grep "^version:" manifest.yaml | cut -d' ' -f2)
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-          AUTHOR=$(grep "^author:" manifest.yaml | cut -d' ' -f2)
-          echo "author=$AUTHOR" >> $GITHUB_OUTPUT
+          echo "plugin_name=$(yq e '.name' manifest.yaml)" >> $GITHUB_OUTPUT
+          echo "version=$(yq e '.version' manifest.yaml)" >> $GITHUB_OUTPUT
+          echo "author=$(yq e '.author' manifest.yaml)" >> $GITHUB_OUTPUT
 
       - name: Package Plugin
         id: package
