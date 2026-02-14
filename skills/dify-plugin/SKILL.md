@@ -70,17 +70,14 @@ The `install_plugin.py` script uploads and installs plugins via Dify API. It reu
 
 When the plugin is ready, you may ask user to try it.
 
-### Phase 6: Iterate & Release
+### Phase 6: Publish & Release
 
-**Dev Branch (Testing)**:
-1. Update version in `manifest.yaml` with dev suffix (e.g., `0.1.0-dev.1`)
-2. Package plugin: `dify plugin package <path/to/plugin>`
-3. Create GitHub pre-release with `.difypkg` file
+**IMPORTANT**: When the user wants to publish/release a plugin, you MUST ask them to choose the publishing target using `AskUserQuestion`:
 
-**Main Branch (Production)**:
-1. Update version in `manifest.yaml` with release number (e.g., `0.1.0`)
-2. Package plugin: `dify plugin package <path/to/plugin>`
-3. Create GitHub release with `.difypkg` file
+- **Dify Marketplace** — Publish to the official Dify plugin marketplace (public, discoverable by all Dify users)
+- **GitHub Release** — Publish as a GitHub Release with `.difypkg` file (private/self-hosted deployment)
+
+Refer to [publish-plugin.md](publish-plugin.md) for the complete publishing guide for both options.
 
 ### Troubleshooting
 
