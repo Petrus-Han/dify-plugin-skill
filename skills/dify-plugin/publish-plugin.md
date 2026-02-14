@@ -115,52 +115,157 @@ After creating a PR, follow this loop until CI passes and the PR is approved:
 
 **Important**: Each push to the fork branch triggers a new CI run. For fork PRs, each `synchronize` event may again require maintainer approval.
 
+### Local Pre-Check (Run Before Submitting PR)
+
+**IMPORTANT**: Before packaging and submitting a PR, always run the local pre-check script to catch issues early. The project should have a `scripts/pre-check-marketplace.sh` script that mimics the Marketplace CI checks locally.
+
+```bash
+# Run pre-check on a single plugin
+bash scripts/pre-check-marketplace.sh <plugin_directory>
+
+# Run pre-check on all plugins
+for d in *_plugin; do echo "=== $d ===" && bash scripts/pre-check-marketplace.sh "$d"; done
+```
+
+If the project doesn't have this script yet, copy it from this skill's [`scripts/pre-check-marketplace.sh`](scripts/pre-check-marketplace.sh). Read the file with the `Read` tool and write it to the project's `scripts/` directory.
+
+The script checks everything the Marketplace CI checks: README.md, PRIVACY.md, manifest author, icon, version uniqueness, requirements.txt, junk files, and packaging.
+
+### .gitignore Template for Marketplace Plugins
+
+Every plugin **must** have a `.gitignore` that excludes files not needed in the `.difypkg` package. The `dify plugin package` command respects `.gitignore`. Use this standard template:
+
+```gitignore
+# Virtual environments
+.venv/
+venv/
+ENV/
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+# Testing
+.pytest_cache/
+.coverage
+htmlcov/
+.tox/
+.nox/
+# Linting
+.ruff_cache/
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+# OS
+.DS_Store
+# Environment
+.env
+.env.*
+!.env.example
+# Dify plugin
+*.difypkg
+.credentials
+debug.log
+# Build
+dist/
+build/
+*.egg
+*.egg-info/
+# Lock files
+uv.lock
+# Tests (not needed in marketplace package)
+tests/
+```
+
 ### Manual Publishing (without Auto-PR workflow)
 
 If the auto-PR workflow is not set up, you can publish manually:
 
 ```bash
-# 1. Package the plugin
+# 1. Run local pre-check
+bash scripts/pre-check-marketplace.sh <plugin_directory>
+
+# 2. Package the plugin
 dify plugin package <path/to/plugin> -o <name>-<version>.difypkg
 
-# 2. Clone your fork of langgenius/dify-plugins
+# 3. Clone your fork of langgenius/dify-plugins
 git clone https://github.com/<your-fork>/dify-plugins.git /tmp/dify-plugins
 cd /tmp/dify-plugins
 
-# 3. Sync fork with upstream
+# 4. Sync fork with upstream
 git remote add upstream https://github.com/langgenius/dify-plugins.git
 git fetch upstream main && git reset --hard upstream/main
 
-# 4. Create branch, copy package, push
+# 5. Create branch, copy package, push
 git checkout -b bump-<name>-plugin-<version>
 mkdir -p <author>/<name>
 cp <name>-<version>.difypkg <author>/<name>/
 git add . && git commit -m "bump <name> plugin to version <version>"
 git push -u origin bump-<name>-plugin-<version>
 
-# 5. Create PR (one PR per plugin)
+# 6. Create PR (one PR per plugin, use the official template)
 gh pr create \
   --repo langgenius/dify-plugins \
   --head "<fork-owner>:bump-<name>-plugin-<version>" \
   --base main \
   --title "bump <name> plugin to version <version>" \
-  --body "bump <name> plugin package to version <version>"
+  --body "$(cat <<'PREOF'
+# Plugin Submission Form
+
+## 1. Metadata
+- **Plugin Author**: <author>
+- **Plugin Name**: <name>
+- **Repository URL**: <source-repo-url>
+
+## 2. Submission Type
+- [x] New plugin submission / Version update for existing plugin
+
+## 3. Description
+Bump <name> plugin to version <version>.
+
+## 4. Checklist
+- [x] I have read and followed the Publish to Dify Marketplace guidelines
+- [x] I have read and comply with the Plugin Developer Agreement
+- [x] I confirm my plugin works properly on both Dify Community Edition and Cloud Version
+- [x] I confirm my plugin has been thoroughly tested for completeness and functionality
+- [x] My plugin brings new value to Dify
+
+## 5. Documentation Checklist
+- [x] Step-by-step setup instructions
+- [x] Detailed usage instructions
+- [x] All required APIs and credentials are clearly listed
+- [x] Connection requirements and configuration details
+- [x] Link to the repository for the plugin source code
+
+## 6. Privacy Protection Information
+### Data Collection
+See PRIVACY.md in the plugin package.
+### Privacy Policy
+- [x] I confirm that I have prepared and included a privacy policy in my plugin package
+PREOF
+)"
 ```
 
 ### Checklist Before Publishing
 
+- [ ] **Local pre-check passes**: `bash scripts/pre-check-marketplace.sh <plugin>`
 - [ ] Version bumped in `manifest.yaml`
 - [ ] `author` is not `langgenius` or `dify`
 - [ ] Custom icon at `_assets/icon.svg` (not default template)
 - [ ] `README.md` exists in plugin root (English only, no CJK characters)
 - [ ] `PRIVACY.md` exists in plugin root
+- [ ] `requirements.txt` exists with `dify-plugin>=0.5.0`
+- [ ] `.gitignore` excludes junk files (`.pytest_cache/`, `.ruff_cache/`, `.credentials`, `debug.log`, `uv.lock`, `tests/`)
 - [ ] Version does not already exist in marketplace
-- [ ] No `.venv`/`venv`/`__pycache__` directories (use `.gitignore`)
 - [ ] No hardcoded credentials or secrets
 - [ ] Plugin packages successfully: `dify plugin package .`
 - [ ] Plugin tested on a real Dify instance
 - [ ] Only ONE `.difypkg` file changed per PR
 - [ ] PR title/body in English (no CJK characters)
+- [ ] PR body uses the official Plugin Submission Form template
 - [ ] `PLUGIN_ACTION` secret configured with valid PAT (if using auto-PR)
 - [ ] `{author}/dify-plugins` fork exists and is up to date
 
